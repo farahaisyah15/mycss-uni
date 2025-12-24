@@ -93,7 +93,7 @@ import {
 // [SECTION] FIREBASE CONFIGURATION & INITIALIZATION
 // -----------------------------------------------------------------------------
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
+  apiKey: import.meta.env.VITE_GOOGLE_API_KEY, // Mesti ada VITE_ kat depan
   authDomain: "uthm-css-7741c.firebaseapp.com",
   projectId: "uthm-css-7741c",
   storageBucket: "uthm-css-7741c.firebasestorage.app",
