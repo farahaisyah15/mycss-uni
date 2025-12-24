@@ -93,7 +93,7 @@ import {
 // [SECTION] FIREBASE CONFIGURATION & INITIALIZATION
 // -----------------------------------------------------------------------------
 const firebaseConfig = {
-  apiKey: "AIzaSyAIA1di00ABieFmO-Z2YCSgLJGpPQWpSdM",
+  apiKey: process.env.REACT_APP_GOOGLE_API_KEY,
   authDomain: "uthm-css-7741c.firebaseapp.com",
   projectId: "uthm-css-7741c",
   storageBucket: "uthm-css-7741c.firebasestorage.app",
