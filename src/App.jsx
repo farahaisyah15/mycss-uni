@@ -1912,8 +1912,7 @@ const AuthView = () => {
       </button>
 
       {/* --- DARK MODE GLASSMORPHISM CARD (bg-white/5) --- */}
-      <div className="bg-white/5 backdrop-blur-3xl p-16 rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 max-w-xl w-full relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
-        
+      <div className="bg-white/5 backdrop-blur-3xl p-8 md:p-16 rounded-[3rem] md:rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 w-[90%] md:max-w-xl lg:max-w-2xl relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
         {/* Glow Line at top of card */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>S
         
