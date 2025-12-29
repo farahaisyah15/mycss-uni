@@ -22,6 +22,9 @@ import {
   Bell, 
   Sparkles, 
   Trophy, 
+  Briefcase,
+  Palette,
+  Store,
   GraduationCap, 
   Heart, 
   Wrench, 
@@ -129,7 +132,7 @@ const Navbar = () => {
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/40 border border-white/10">
             <Building2 className="text-white" size={24} />
           </div>
-          <h1 className="text-white font-black text-lg leading-tight tracking-tighter uppercase drop-shadow-md">UTHM EVENT<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">PORTAL</span></h1>
+          <h1 className="text-white font-black text-lg leading-tight tracking-tighter uppercase drop-shadow-md">UTHM EVENT<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">PULSE</span></h1>
         </div>
         
         {/* Mobile Auth Button */}
@@ -183,8 +186,8 @@ const Navbar = () => {
               <Search size={18} /> EVENTS
             </button>
             <button 
-              onClick={() => {}} // Static placeholder for now
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-[10px] md:text-xs tracking-widest transition-all duration-300 whitespace-nowrap shrink-0 text-slate-400 hover:text-white`}
+              onClick={() => setView('about')} // Add this handler
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-[10px] md:text-xs tracking-widest transition-all duration-300 whitespace-nowrap shrink-0 ${view === 'about' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'}`}
             >
               <Info size={18} /> ABOUT US
             </button>
@@ -255,14 +258,14 @@ const HomeView = () => {
     if (events.length === 0) return { upcomingEvents: mockEvents, pastEvents: [] };
 
     const upcoming = events
-      .filter(e => new Date(e.date) >= now)
+      .filter(e => e.approval === 'Approved' && new Date(e.date) >= now)
       .sort((a, b) => new Date(a.date) - new Date(b.date))
       .slice(0, 3); // Take top 3 upcoming
 
     const past = events
       .filter(e => {
         const d = new Date(e.date);
-        return d < now && d >= threeMonthsAgo;
+        return e.approval === 'Approved' && d < now && d >= threeMonthsAgo;
       })
       .sort((a, b) => new Date(b.date) - new Date(a.date)) // Most recent past first
       .slice(0, 3); // Take top 3 recent past
@@ -442,7 +445,7 @@ const CalendarView = () => {
           {Array(firstDay).fill(null).map((_, i) => <div key={`empty-${i}`} className="h-40 border-r border-b border-indigo-50/50 bg-slate-50/20"></div>)}
           {Array(days).fill(null).map((_, i) => {
             const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-            const dayEvents = events.filter(e => e.date === dateStr);
+            const dayEvents = events.filter(e => e.date === dateStr && e.approval === 'Approved');
             return (
               <div key={i} className="h-40 border-r border-b border-indigo-50/50 p-4 hover:bg-indigo-50/40 transition-all relative group cursor-pointer"
                 onClick={() => dayEvents.length > 0 && (setSelectedEvent(dayEvents[0]), setView('detail'))}>
@@ -467,7 +470,18 @@ const CalendarView = () => {
 const BrowseView = () => {
   const { events, setSelectedEvent, setView, searchQuery, setSearchQuery, categoryFilter, setCategoryFilter } = useContext(AppContext);
     
-  const categories = ['All', 'Sport', 'Academic', 'Welfare', 'Workshop'];
+  const categories = [
+  'All', 
+  'Sport', 
+  'Academic', 
+  'Workshop', 
+  'Welfare', 
+  'Leadership', 
+  'Entrepreneur', 
+  'Arts', 
+  'Religious', 
+  'Career'
+];
   
   // [UPDATED] Filtering logic: Exclude events older than 3 months
   const filtered = events.filter(e => {
@@ -476,12 +490,13 @@ const BrowseView = () => {
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
     // Ignore time portion for date comparisons generally
     threeMonthsAgo.setHours(0,0,0,0); 
-
+    
+    const isApproved = e.approval === 'Approved';
     const isNotTooOld = eventDate >= threeMonthsAgo;
     const matchesCategory = categoryFilter === 'All' || e.category === categoryFilter;
     const matchesSearch = e.title.toLowerCase().includes(searchQuery.toLowerCase()) || (e.clubName && e.clubName.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    return isNotTooOld && matchesCategory && matchesSearch;
+    return isApproved && isNotTooOld && matchesCategory && matchesSearch;
   });
 
   return (
@@ -537,6 +552,31 @@ const DetailedView = () => {
     
   if (!selectedEvent) return null;
 
+  const isAuthorized = profile?.role === 'club' || user?.uid === selectedEvent.createdBy;
+  const isApproved = selectedEvent.approval === 'Approved';
+
+  if (!isApproved && !isAuthorized) {
+    return (
+      <div className="p-20 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shadow-lg">
+          <AlertCircle size={48} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight">Access Restricted</h2>
+          <p className="text-slate-500 font-medium max-w-sm">
+            This event is currently awaiting administrative approval (PPW) and is not yet available for public view or registration.
+          </p>
+        </div>
+        <button 
+          onClick={() => setView('browse')} 
+          className="px-8 py-3 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg"
+        >
+          Return to Marketplace
+        </button>
+      </div>
+    );
+  }
+  
   // --- [NEW LOGIC START] COUNTDOWN & CALENDAR ---
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
@@ -1284,7 +1324,15 @@ const CreateEditEvent = () => {
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Category</label>
               <select name="category" defaultValue={selectedEvent?.category || 'Workshop'} className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                <option>Workshop</option><option>Seminar</option><option>Sport</option><option>Academic</option><option>Welfare</option>
+                <option>Sport</option>
+                <option>Academic</option>
+                <option>Workshop</option>
+                <option>Welfare</option>
+                <option>Leadership</option>
+                <option>Entrepreneur</option>
+                <option>Arts</option>
+                <option>Religious</option>
+                <option>Career</option>
               </select>
             </div>
             <div className="space-y-1">
@@ -1915,7 +1963,7 @@ const AuthView = () => {
       {/* Gantikan max-w-xl dengan kod responsive di bawah */}
       <div className="bg-white/5 backdrop-blur-3xl p-6 md:p-16 rounded-[3.5rem] md:rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 w-[98%] max-w-md md:max-w-xl lg:max-w-lg relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
         {/* Glow Line at top of card */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>S
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>
         
         <div className="text-center mb-10 relative z-10">
            <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/30 border border-white/20">
@@ -2007,6 +2055,78 @@ const AuthView = () => {
 };
 
 // -----------------------------------------------------------------------------
+// [SECTION] VIEW: ABOUT US
+// -----------------------------------------------------------------------------
+const AboutUsView = () => {
+  return (
+    <div className="p-8 max-w-5xl mx-auto space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* 1. HERO SECTION (The Big Statement) */}
+      <div className="text-center space-y-6 py-12">
+        <h2 className="text-3xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 tracking-tighter uppercase leading-none">
+          Unlock Every Opportunity, <br/> Experience Every Moment.
+        </h2>
+        <div className="w-24 h-2 bg-indigo-600 mx-auto rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]"></div>
+      </div>
+
+      {/* 2. MISSION STATEMENT (Who We Are) */}
+      <div className="bg-white/70 backdrop-blur-2xl p-12 rounded-[3.5rem] shadow-2xl border border-white/60 relative overflow-hidden group">
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-100 rounded-full blur-3xl opacity-50 group-hover:bg-indigo-200 transition-colors duration-700"></div>
+        <div className="relative z-10 space-y-6">
+          <h3 className="text-xs font-black text-indigo-500 uppercase tracking-[0.4em]">Our Mission</h3>
+          <p className="text-2xl md:text-3xl font-bold text-slate-800 leading-relaxed italic">
+            "The UTHM Event Portal is a centralized digital hub designed to revolutionize how students and organizations interact within our campus. We simplify the journey from discovering an event to scanning your ticket at the door."
+          </p>
+        </div>
+      </div>
+
+      {/* 3. KEY PILLARS (The Features) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {[
+          { 
+            title: "Seamless Discovery", 
+            desc: "Browse through a diverse range of activities from academic workshops to sports tournaments.",
+            icon: <Search size={28} />,
+            color: "indigo"
+          },
+          { 
+            title: "Effortless Registration", 
+            desc: "No more messy Google Forms. Register in seconds with your integrated student profile.",
+            icon: <UserCheck size={28} />,
+            color: "violet"
+          },
+          { 
+            title: "Sustainability First", 
+            desc: "We are going paperless. Say goodbye to physical tickets and hello to digital QR passes.",
+            icon: <ShieldCheck size={28} />,
+            color: "emerald"
+          },
+          { 
+            title: "Empowering Clubs", 
+            desc: "Providing student leaders with real-time analytics and automated participant management.",
+            icon: <LayoutDashboard size={28} />,
+            color: "cyan"
+          }
+        ].map((pillar, idx) => (
+          <div key={idx} className="bg-white/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 hover:bg-white/80 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl group">
+             <div className={`w-14 h-14 bg-${pillar.color}-100 text-${pillar.color}-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:bg-${pillar.color}-600 group-hover:text-white transition-all`}>
+               {pillar.icon}
+             </div>
+             <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-3">{pillar.title}</h4>
+             <p className="text-slate-500 font-medium leading-relaxed">{pillar.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* FOOTER CALL TO ACTION */}
+      <div className="text-center pt-10">
+        <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] mb-4 italic">Built for the future of UTHM</p>
+      </div>
+    </div>
+  );
+};
+
+// -----------------------------------------------------------------------------
 // [SECTION] MAIN APP COMPONENT
 // -----------------------------------------------------------------------------
 export default function UTHMClubEventSystem() {
@@ -2026,15 +2146,20 @@ export default function UTHMClubEventSystem() {
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const getCategoryTheme = (cat) => {
-    switch (cat) {
-      case 'Sport': return { color: 'amber', icon: <Trophy size={14} /> };
-      case 'Academic': return { color: 'indigo', icon: <GraduationCap size={14} /> };
-      case 'Welfare': return { color: 'emerald', icon: <Heart size={14} /> };
-      case 'Workshop': return { color: 'violet', icon: <Wrench size={14} /> };
-      default: return { color: 'slate', icon: <Sparkles size={14} /> };
-    }
-  };
+const getCategoryTheme = (cat) => {
+  switch (cat) {
+    case 'Sport': return { color: 'amber', icon: <Trophy size={14} /> };
+    case 'Academic': return { color: 'indigo', icon: <GraduationCap size={14} /> };
+    case 'Workshop': return { color: 'violet', icon: <Wrench size={14} /> };
+    case 'Welfare': return { color: 'emerald', icon: <Heart size={14} /> };
+    case 'Leadership': return { color: 'blue', icon: <ShieldCheck size={14} /> };
+    case 'Entrepreneur': return { color: 'cyan', icon: <Store size={14} /> };
+    case 'Arts': return { color: 'rose', icon: <Palette size={14} /> };
+    case 'Religious': return { color: 'teal', icon: <BookOpen size={14} /> };
+    case 'Career': return { color: 'slate', icon: <Briefcase size={14} /> };
+    default: return { color: 'slate', icon: <Sparkles size={14} /> };
+  }
+};
 
   useEffect(() => {
     const initAuth = async () => {
@@ -2249,7 +2374,7 @@ export default function UTHMClubEventSystem() {
         <div className="w-24 h-24 border-8 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin shadow-[0_0_20px_rgba(99,102,241,0.5)]"></div>
         <Building2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-20" size={32} />
       </div>
-      <p className="mt-8 text-white font-black text-xs tracking-[0.4em] uppercase opacity-40 animate-pulse">Initializing Portal</p>
+      <p className="mt-8 text-white font-black text-xs tracking-[0.4em] uppercase opacity-40 animate-pulse">PREPARING YOUR EXPERIENCE...</p>
     </div>
   );
 
@@ -2281,9 +2406,9 @@ export default function UTHMClubEventSystem() {
                 <h1 className="font-black text-sm text-slate-400 uppercase tracking-[0.2em]">
                   {view === 'home' && 'HOME PAGE'}
                   {view === 'calendar' && 'MONTHLY SCHEDULE'}
-                  {view === 'browse' && 'EVENT MARKETPLACE'}
-                  {view === 'profile' && 'USER MANAGEMENT'}
-                  {view === 'view-participants' && 'ADMIN PORTAL'}
+                  {view === 'browse' && 'EVENT DISCOVERY'}
+                  {view === 'profile' && 'USER PROFILE'}
+                  {view === 'view-participants' && 'MANAGE PARTICIPANTS '}
                   {view === 'edit-profile' && 'PROFILE SETTINGS'}
                 </h1>
               </div>
@@ -2325,6 +2450,7 @@ export default function UTHMClubEventSystem() {
             {view === 'auth' && <AuthView />}
             {view === 'view-participants' && <ParticipantsListView />}
             {view === 'edit-profile' && <EditProfileView />}
+            {view === 'about' && <AboutUsView />}
           </div>
         </main>
       </div>
