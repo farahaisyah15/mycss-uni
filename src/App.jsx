@@ -1912,7 +1912,8 @@ const AuthView = () => {
       </button>
 
       {/* --- DARK MODE GLASSMORPHISM CARD (bg-white/5) --- */}
-      <div className="bg-white/5 backdrop-blur-3xl p-8 md:p-16 rounded-[3rem] md:rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 w-[90%] md:max-w-xl lg:max-w-2xl relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
+      {/* Gantikan max-w-xl dengan kod responsive di bawah */}
+      <div className="bg-white/5 backdrop-blur-3xl p-10 md:p-16 rounded-[3.5rem] md:rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 w-[92%] max-w-md md:min-w-[500px] md:max-w-xl relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
         {/* Glow Line at top of card */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>S
         
@@ -1921,9 +1922,10 @@ const AuthView = () => {
              <Building2 size={40} className="text-white"/>
            </div>
 
-           <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-tighter leading-none">
-             {authMode === 'login' ? 'Hello Again!' : 'CREATE A NEW ACCOUNT'}
-           </h2>
+            <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-tighter leading-none">
+              {authMode === 'login' ? 'Hello Again!' : 'CREATE A NEW ACCOUNT'}
+            </h2>
+
            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] mt-4 italic opacity-60">
              Start your journey with us
            </p>
