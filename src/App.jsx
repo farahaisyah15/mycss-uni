@@ -901,7 +901,7 @@ const RegistrationForm = () => {
                 notify("Registration updated!");
             } else {
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'registrations'), regData);
-                notify("Registration success!");
+                notify("Registration successful! See you there.");
             }
             
             setRegId(finalRegId);
@@ -937,7 +937,7 @@ const RegistrationForm = () => {
             {config.requireMatric && (
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Matric Number</label>
-                <input name="matric" defaultValue={existingReg?.matric} placeholder="e.g. AI12345" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+                <input name="matric" defaultValue={existingReg?.matric} placeholder="e.g. AB12345" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
               </div>
             )}
             {config.requireFaculty && (
@@ -1015,7 +1015,12 @@ const CreateEditEvent = () => {
   const [uploading, setUploading] = useState(false);
   const [posterFile, setPosterFile] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState(null);
-    
+
+  // --- [NEW] Validation States ---
+  const [conflictModal, setConflictModal] = useState(false);
+  const [conflictingEvent, setConflictingEvent] = useState(null);
+  const [pendingData, setPendingData] = useState(null); // Stores form data while waiting for user confirmation
+
   // Registration Form Preferences State
   const [formConfig, setFormConfig] = useState(selectedEvent?.formConfig || {
     requireMatric: true,
@@ -1031,7 +1036,7 @@ const CreateEditEvent = () => {
   // Logic to parse existing time string "HH:MM to HH:MM" for edit mode
   let defaultStart = '';
   let defaultEnd = '';
-   
+  
   if (selectedEvent?.time && selectedEvent.time.includes(' to ')) {
     const parts = selectedEvent.time.split(' to ');
     if (parts.length === 2) {
@@ -1040,64 +1045,166 @@ const CreateEditEvent = () => {
     }
   }
 
+  // --- [NEW] Helper: Convert Time "HH:MM" to minutes for comparison ---
+  const getMinutes = (timeStr) => {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  // --- [NEW] Step 1: Handle the Submit Button Click ---
+  const handlePreSubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    
+    // 1. Capture Form Data
+    const rawData = {
+      title: f.title.value,
+      date: f.date.value,
+      timeFrom: f.timeFrom.value,
+      timeTo: f.timeTo.value,
+      location: f.venue.value,
+      category: f.category.value,
+      max: f.max.value,
+      description: f.description.value,
+      approval: f.approval.value,
+      externalLink: f.externalLink.value
+    };
+
+    // 2. Overlap Logic
+    const newStart = getMinutes(rawData.timeFrom);
+    const newEnd = getMinutes(rawData.timeTo);
+
+    // Find any event that overlaps
+    const overlap = events.find(ev => {
+      // Don't check against itself if editing
+      if (selectedEvent && ev.id === selectedEvent.id) return false;
+      
+      // Must be same date
+      if (ev.date !== rawData.date) return false;
+
+      // Parse existing event times (Format: "HH:MM to HH:MM")
+      if (!ev.time || !ev.time.includes(' to ')) return false;
+      const [evStartStr, evEndStr] = ev.time.split(' to ');
+      const evStart = getMinutes(evStartStr);
+      const evEnd = getMinutes(evEndStr);
+
+      // Overlap Formula: (StartA < EndB) and (EndA > StartB)
+      return (newStart < evEnd && newEnd > evStart);
+    });
+
+    if (overlap) {
+      // 3. If Overlap found, Show Custom Popup
+      // Parse the overlapping time for the message
+      const [ovStart, ovEnd] = overlap.time.split(' to ');
+      
+      setConflictingEvent({
+        date: overlap.date,
+        startTime: ovStart,
+        endTime: ovEnd,
+        title: overlap.title // Optional: purely for context
+      });
+      setPendingData(rawData); // Save data to state
+      setConflictModal(true);  // Open Modal
+    } else {
+      // 4. No Overlap, proceed directly
+      await processFinalSave(rawData);
+    }
+  };
+
+  // --- [NEW] Step 2: Actual Firebase Save Function ---
+  const processFinalSave = async (data) => {
+    if (!user) return;
+    setUploading(true);
+    setConflictModal(false); // Close modal if open
+
+    try {
+      let posterUrl = selectedEvent?.poster || '';
+      if (posterFile) {
+        posterUrl = await uploadFile(posterFile, `events/${user.uid}`);
+      }
+
+      let galleryUrls = selectedEvent?.photos ? selectedEvent.photos.split(',') : [];
+      if (galleryFiles && galleryFiles.length > 0) {
+        const newUrls = await Promise.all(Array.from(galleryFiles).map(file => uploadFile(file, `events/${user.uid}/gallery`)));
+        galleryUrls = [...galleryUrls, ...newUrls];
+      }
+
+      const finalPayload = {
+        title: data.title,
+        date: data.date,
+        time: `${data.timeFrom} to ${data.timeTo}`, // Combine time here
+        location: data.location,
+        category: data.category,
+        maxParticipants: data.max,
+        description: data.description,
+        approval: data.approval,
+        clubName: profile?.fullName,
+        createdBy: user.uid,
+        poster: posterUrl,
+        photos: galleryUrls.join(','),
+        formConfig: { ...formConfig, externalLink: data.externalLink },
+        lastModified: serverTimestamp()
+      };
+
+      if (selectedEvent) {
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', selectedEvent.id), finalPayload);
+        notify("Event updated successfully!");
+      } else {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), { ...finalPayload, createdAt: serverTimestamp() });
+        notify("New event created!");
+      }
+      setView('profile');
+    } catch (e) { 
+      alert(e.message); 
+    } finally { 
+      setUploading(false); 
+      setPendingData(null);
+    }
+  };
+
   return (
-    <div className="p-8 max-w-2xl mx-auto animate-in zoom-in-95 duration-500">
+    <div className="p-8 max-w-2xl mx-auto animate-in zoom-in-95 duration-500 relative">
+      
+      {/* --- [NEW] CUSTOM CONFIRMATION MODAL --- */}
+      {conflictModal && conflictingEvent && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setConflictModal(false)}></div>
+            <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative z-10 border border-slate-200 animate-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+                    <AlertCircle size={32} />
+                </div>
+                <h3 className="text-xl font-black text-center text-slate-800 mb-4 uppercase">Schedule Confirmation</h3>
+                
+                <p className="text-sm text-slate-600 text-center leading-relaxed mb-8">
+                  There is another event scheduled on <span className="font-bold text-slate-900">{conflictingEvent.date}</span> from <span className="font-bold text-slate-900">{conflictingEvent.startTime}</span> to <span className="font-bold text-slate-900">{conflictingEvent.endTime}</span>.
+                  <br/><br/>
+                   Do you want to proceed with creating this event?
+                </p>
+
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => setConflictModal(false)}
+                        className="flex-1 py-3 rounded-xl border-2 border-slate-100 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 transition"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={() => processFinalSave(pendingData)}
+                        className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-black text-xs uppercase shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition"
+                    >
+                        Yes, Proceed
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
       <div className="bg-white/80 backdrop-blur-2xl p-12 rounded-[3.5rem] shadow-2xl border border-white/60">
         <h2 className="text-3xl font-black mb-10 uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-indigo-900">{selectedEvent ? 'EDIT EVENT' : 'CREATE NEW EVENT'}</h2>
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          const f = e.target;
-          if (!user) return;
-
-          const isOverlapping = events.some(ev => ev.date === f.date.value && ev.clubName === profile?.fullName && ev.id !== selectedEvent?.id);
-          if (isOverlapping) {
-            notify("You already have an event on this date!", "error");
-            return;
-          }
-
-          setUploading(true);
-          try {
-            let posterUrl = selectedEvent?.poster || '';
-            if (posterFile) {
-                posterUrl = await uploadFile(posterFile, `events/${user.uid}`);
-            }
-
-            let galleryUrls = selectedEvent?.photos ? selectedEvent.photos.split(',') : [];
-            if (galleryFiles && galleryFiles.length > 0) {
-                // Upload all selected gallery files
-                const newUrls = await Promise.all(Array.from(galleryFiles).map(file => uploadFile(file, `events/${user.uid}/gallery`)));
-                // Append new URLs to existing list
-                galleryUrls = [...galleryUrls, ...newUrls];
-            }
-
-            const data = {
-                title: f.title.value,
-                date: f.date.value,
-                time: `${f.timeFrom.value} to ${f.timeTo.value}`,
-                location: f.venue.value,
-                category: f.category.value,
-                maxParticipants: f.max.value,
-                description: f.description.value,
-                approval: f.approval.value,
-                clubName: profile?.fullName,
-                createdBy: user.uid,
-                poster: posterUrl,
-                photos: galleryUrls.join(','),
-                formConfig: { ...formConfig, externalLink: f.externalLink.value },
-                lastModified: serverTimestamp()
-            };
-
-            if (selectedEvent) {
-              await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', selectedEvent.id), data);
-              notify("Event updated!");
-            } else {
-              await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), { ...data, createdAt: serverTimestamp() });
-              notify("New event created!");
-            }
-            setView('profile');
-          } catch (e) { alert(e.message); }
-          finally { setUploading(false); }
-        }} className="space-y-6">
+        
+        {/* Changed onSubmit to handlePreSubmit */}
+        <form onSubmit={handlePreSubmit} className="space-y-6">
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Event Title*</label>
             <input name="title" defaultValue={selectedEvent?.title} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all" />
@@ -1501,7 +1608,7 @@ const EditProfileView = () => {
             };
             await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), data);
             setProfile(data);
-            notify("Profile updated successfully!");
+            notify("Looking good! Profile changes saved");
             setView('profile');
           } catch (e) { 
             console.error(e);
@@ -1561,7 +1668,7 @@ const EditProfileView = () => {
             <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Course Name</label>
             <div className="relative">
               <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18}/>
-              <input name="course" defaultValue={profile?.course} placeholder="Software Engineering" className="w-full pl-12 pr-4 py-4 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+              <input name="course" defaultValue={profile?.course} placeholder="Mechanical Engineering" className="w-full pl-12 pr-4 py-4 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
             </div>
           </div>
 
@@ -1780,102 +1887,123 @@ const ProfileView = () => {
 // -----------------------------------------------------------------------------
 // [SECTION] VIEW: AUTHENTICATION (LOGIN/SIGNUP)
 // -----------------------------------------------------------------------------
+
 const AuthView = () => {
   const { authMode, setAuthMode, setView, setProfile, setLoading, notify } = useContext(AppContext);
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="h-full flex items-center justify-center p-8 bg-transparent relative">
+    /* Tukar bg-transparent ke bg-slate-950 supaya glow blobs lebih menonjol */
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-20 bg-slate-950 relative overflow-hidden">
+
+      {/* --- LATAR BELAKANG TAK KOSONG (ANIMATED BLOBS) --- */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px] animate-pulse delay-700"></div>
       
-      {/* Back Arrow - Added as requested */}
+      {/* Grid Pattern untuk estetika moden */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+
+      {/* Back Arrow Button */}
       <button 
         onClick={() => setView('home')} 
-        className="absolute top-4 left-4 md:top-8 md:left-8 p-3 md:p-4 bg-white/50 backdrop-blur-xl border border-white/60 rounded-2xl shadow-lg text-slate-500 hover:text-indigo-600 hover:bg-white transition-all z-50 group"
+        className="absolute top-4 left-4 md:top-8 md:left-8 p-3 md:p-4 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg text-slate-400 hover:text-white hover:bg-white/20 transition-all z-50 group"
       >
         <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
       </button>
 
-      <div className="bg-white/80 backdrop-blur-2xl p-16 rounded-[4.5rem] shadow-2xl border border-white/60 max-w-md w-full relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full -mr-16 -mt-16 blur-[60px] opacity-40"></div>
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-cyan-500 rounded-full -ml-16 -mb-16 blur-[60px] opacity-40"></div>
+      {/* --- DARK MODE GLASSMORPHISM CARD (bg-white/5) --- */}
+      <div className="bg-white/5 backdrop-blur-3xl p-16 rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 max-w-xl w-full relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
+        
+        {/* Glow Line at top of card */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>S
+        
         <div className="text-center mb-10 relative z-10">
-           <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/30">
+           <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-500/30 border border-white/20">
              <Building2 size={40} className="text-white"/>
            </div>
-           <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-indigo-900 uppercase tracking-tighter leading-none">{authMode === 'login' ? 'PORTAL LOGIN' : 'CREATE ACCOUNT'}</h2>
-           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] mt-4 italic opacity-60">Authentication Node</p>
+
+           <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-tighter leading-none">
+             {authMode === 'login' ? 'Hello Again!' : 'CREATE A NEW ACCOUNT'}
+           </h2>
+           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] mt-4 italic opacity-60">
+             Start your journey with us
+           </p>
         </div>
+
         <form onSubmit={async (e) => {
-          e.preventDefault();
-          const f = e.target;
-          if (authMode === 'signup' && f.password.value !== f.rePassword.value) { notify("Passwords mismatch", "error"); return; }
-          setLoading(true);
-          try {
-            if (authMode === 'login') await signInWithEmailAndPassword(auth, f.email.value, f.password.value);
-            else {
-              const res = await createUserWithEmailAndPassword(auth, f.email.value, f.password.value);
-              const data = { fullName: f.fullName.value, email: f.email.value, role: f.role.value, faculty: 'FCI', createdAt: serverTimestamp() };
-              await setDoc(doc(db, 'artifacts', appId, 'users', res.user.uid, 'profile', 'data'), data);
-              setProfile(data);
-            }
-            setView('home');
-            notify("Access Granted");
-          } catch (e) { notify(e.message, "error"); }
-          finally { setLoading(false); }
-        }} className="space-y-4 relative z-10">
-          {authMode === 'signup' && <input name="fullName" required placeholder="Display Name" className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />}
-          <input name="email" required type="email" placeholder="Campus Email" className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+        e.preventDefault();
+        const f = e.target;
+        if (authMode === 'signup' && f.password.value !== f.rePassword.value) { notify("Passwords mismatch", "error"); return; }
+        setLoading(true);
+        try {
+          if (authMode === 'login') {
+            await signInWithEmailAndPassword(auth, f.email.value, f.password.value);
+            notify("Welcome back! Ready for the next event?");
+          } else {
+            const res = await createUserWithEmailAndPassword(auth, f.email.value, f.password.value);
+            const data = { fullName: f.fullName.value, email: f.email.value, role: f.role.value, faculty: 'FCI', createdAt: serverTimestamp() };
+            await setDoc(doc(db, 'artifacts', appId, 'users', res.user.uid, 'profile', 'data'), data);
+            setProfile(data);
+            notify("Account created successfully! Welcome.");
+          }
+          setView('home');
+        } catch (e) { 
+          // Handle technically detailed errors with user-friendly text
+          let msg = "Something went wrong. Please try again.";
+          if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') msg = "Incorrect email or password.";
+          if (e.code === 'auth/email-already-in-use') msg = "Email already exists. Try signing in.";
+          if (e.code === 'auth/too-many-requests') msg = "Too many attempts. Try again later.";
+          
+          notify(msg, "error"); 
+        }
+        finally { setLoading(false); }
+      }} className="space-y-4 relative z-10">
+          
+          {/* Input ditukar ke gaya Dark Glass (text-white) */}
+          {authMode === 'signup' && (
+            <input name="fullName" required placeholder="Full Name" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
+          )}
+          
+          <input name="email" required type="email" placeholder="University Email" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
           
           <div className="relative">
             <input 
               name="password" 
               required 
               type={showPassword ? "text" : "password"} 
-              placeholder="Auth Token / Password" 
-              className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" 
+              placeholder="Password" 
+              className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" 
             />
-            <button 
-              type="button" 
-              onClick={() => setShowPassword(!showPassword)} 
-              className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition"
-            >
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition">
               {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
             </button>
           </div>
 
           {authMode === 'signup' && (
             <div className="relative">
-              <input 
-                name="rePassword" 
-                required 
-                type={showPassword ? "text" : "password"} 
-                placeholder="Verify Password" 
-                className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" 
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)} 
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition"
-              >
-                {showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}
-              </button>
+              <input name="rePassword" required type={showPassword ? "text" : "password"} placeholder="Verify Password" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
             </div>
           )}
 
-          {authMode === 'signup' && <select name="role" className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500"><option value="student">Student Account</option><option value="club">Club Administrator</option></select>}
+          {authMode === 'signup' && (
+            <select name="role" className="w-full p-5 bg-slate-900 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="student">Student Account</option>
+              <option value="club">Club Administrator</option>
+            </select>
+          )}
           
           <button type="submit" className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-6 rounded-[2rem] font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-indigo-500/30 mt-6 active:scale-95 hover:scale-[1.02] transition-all duration-300">
-            {authMode === 'login' ? 'Enter Portal' : 'Register Access'}
+            {authMode === 'login' ? 'LogIn' : 'Create Account'}
           </button>
         </form>
-        <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setShowPassword(false); }} className="w-full mt-10 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-[0.4em] text-center transition z-10 relative">
-          {authMode === 'login' ? "Register Access" : "Existing Access"}
+
+        <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setShowPassword(false); }} className="w-full mt-10 text-[10px] font-black text-slate-500 hover:text-indigo-400 uppercase tracking-[0.4em] text-center transition z-10 relative">
+          {authMode === 'login' ? "New here? Create An Account" : "Already have an account?"}
         </button>
       </div>
     </div>
   );
 };
-
 
 // -----------------------------------------------------------------------------
 // [SECTION] MAIN APP COMPONENT
@@ -1968,7 +2096,7 @@ export default function UTHMClubEventSystem() {
   const handleLogout = () => {
     signOut(auth);
     setView('home');
-    notify("Logged out successfully");
+    notify("Logged out successfully.See you again soon!");
   };
 
   const checkDuplicateRegistration = (eventId) => {
@@ -2144,34 +2272,46 @@ export default function UTHMClubEventSystem() {
         {view !== 'auth' && <Navbar />}
 
         <main className="flex-1 h-full overflow-y-auto relative z-10">
-          <header className="h-24 bg-white/70 backdrop-blur-xl border-b border-white/40 px-10 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
-              <h1 className="font-black text-sm text-slate-400 uppercase tracking-[0.2em]">
-                {view === 'home' && 'HOME PAGE'}
-                {view === 'calendar' && 'MONTHLY SCHEDULE'}
-                {view === 'browse' && 'EVENT MARKETPLACE'}
-                {view === 'profile' && 'USER MANAGEMENT'}
-                {view === 'view-participants' && 'ADMIN PORTAL'}
-                {view === 'edit-profile' && 'PROFILE SETTINGS'}
-              </h1>
-            </div>
-            {user && (
-              <div className="flex items-center gap-6">
-                <div className="text-right flex flex-col items-end">
-                  <span className="text-[9px] font-black text-white bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 rounded-full uppercase tracking-tighter mb-1 shadow-md shadow-indigo-500/20">{profile?.role}</span>
-                  <p className="text-sm font-black text-slate-900 leading-none">{profile?.fullName}</p>
-                </div>
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-md ring-2 ring-white/50 overflow-hidden">
-                  {profile?.photoUrl ? (
-                    <img src={profile.photoUrl} alt="Mini Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <User size={24} />
-                  )}
-                </div>
+          {/* 1. Bar hanya muncul jika BUKAN skrin login (auth) */}
+          {view !== 'auth' && (
+            <header className="h-24 bg-white/50 backdrop-blur-md border-b border-white/10 px-10 flex items-center justify-between relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-1 h-8 bg-gradient-to-b from-indigo-500 to-violet-600 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]"></div>
+                <h1 className="font-black text-sm text-slate-400 uppercase tracking-[0.2em]">
+                  {view === 'home' && 'HOME PAGE'}
+                  {view === 'calendar' && 'MONTHLY SCHEDULE'}
+                  {view === 'browse' && 'EVENT MARKETPLACE'}
+                  {view === 'profile' && 'USER MANAGEMENT'}
+                  {view === 'view-participants' && 'ADMIN PORTAL'}
+                  {view === 'edit-profile' && 'PROFILE SETTINGS'}
+                </h1>
               </div>
-            )}
-          </header>
+              {user && !user.isAnonymous && (
+                <div 
+                  onClick={() => setView('profile')}
+                  className="flex items-center gap-6 cursor-pointer hover:opacity-80 transition-all group"
+                >
+                  {/* Bahagian di bawah ini dipermudahkan supaya tidak bertindih div yang sama fungsi */}
+                  <div className="text-right flex flex-col items-end">
+                    <span className="text-[9px] font-black text-white bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 rounded-full uppercase tracking-tighter mb-1 shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                      {profile?.role}
+                    </span>
+                    <p className="text-sm font-black text-slate-900 leading-none group-hover:text-indigo-600 transition-colors">
+                      {profile?.fullName}
+                    </p>
+                  </div>
+                  
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 shadow-md ring-2 ring-white/50 overflow-hidden group-hover:ring-indigo-500/50 transition-all">
+                    {profile?.photoUrl ? (
+                      <img src={profile.photoUrl} alt="Mini Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={24} />
+                    )}
+                  </div>
+                </div> // PENUTUP DIV UTAMA
+              )}
+            </header>
+          )}
 
           <div className="relative pb-20">
             {view === 'home' && <HomeView />}
