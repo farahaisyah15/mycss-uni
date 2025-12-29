@@ -1913,7 +1913,7 @@ const AuthView = () => {
 
       {/* --- DARK MODE GLASSMORPHISM CARD (bg-white/5) --- */}
       {/* Gantikan max-w-xl dengan kod responsive di bawah */}
-      <div className="bg-white/5 backdrop-blur-3xl p-10 md:p-16 rounded-[3.5rem] md:rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 w-[92%] max-w-md md:min-w-[500px] md:max-w-xl relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
+      <div className="bg-white/5 backdrop-blur-3xl p-8 md:p-16 rounded-[3.5rem] md:rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 w-[85%] max-w-[450px] md:max-w-xl lg:max-w-2xl relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
         {/* Glow Line at top of card */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>S
         
