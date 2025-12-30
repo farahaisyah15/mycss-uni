@@ -36,428 +36,92 @@ import {
   Phone, 
   BookOpen, 
   Download, 
-  ShieldCheck, 
-  MoreVertical, 
+  ShieldCheck,
   Eye, 
   EyeOff, 
   Image as ImageIcon, 
   Camera, 
-  Loader2, 
   Lock, 
   ChevronDown, 
   ChevronUp, 
   Settings2, 
   Fingerprint, 
-  Link as LinkIcon, 
-  MessageSquare, 
+  Link as LinkIcon,
   ExternalLink, 
-  Hash, 
-  Globe, 
+  Hash,
   IdCard, 
   Home as HomeIcon, 
-  Info, 
-  Share2,       
-  CalendarPlus 
+  Info,
 } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signOut, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signInWithCustomToken, 
+  signInAnonymously, 
+  updatePassword, 
+  reauthenticateWithCredential, 
+  EmailAuthProvider
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  onSnapshot, 
+  serverTimestamp, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  deleteDoc, 
+  orderBy, 
+  limit
+} from 'firebase/firestore';
+import {
+  getStorage, 
+  ref, 
+  uploadBytes, 
+  getDownloadURL
+} from 'firebase/storage';
 
-// -----------------------------------------------------------------------------
-// [SECTION] MOCK DATA (DATA PALSU UNTUK DEMO)
-// -----------------------------------------------------------------------------
 
-const MOCK_EVENTS_DATA = [
-  {
-    id: 'evt-1',
-    title: 'UTHM Mega E-Sports Championship',
-    date: '2026-11-15',
-    time: '08:00 to 17:00',
-    location: 'Dewan Sultan Ibrahim (DSI)',
-    category: 'Sport',
-    clubName: 'Computer Science Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80',
-    description: 'Pertandingan E-Sports terbesar tahun ini! Valorant, MLBB, dan FIFA.',
-    approval: 'Approved',
-    maxParticipants: 200,
-    isWalkIn: false,
-    formConfig: { requireMatric: true, requireFaculty: true, requireTshirt: true }
-  },
-  {
-    id: 'evt-2',
-    title: 'AI & Future Tech Symposium',
-    date: '2026-10-20',
-    time: '09:00 to 13:00',
-    location: 'Auditorium FSKTM',
-    category: 'Academic',
-    clubName: 'Robotics Club',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80',
-    description: 'Seminar tentang masa depan AI bersama pakar industri.',
-    approval: 'Approved',
-    maxParticipants: 100,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-3',
-    title: 'Neon Night Run 2025',
-    date: '2026-12-05',
-    time: '20:00 to 23:00',
-    location: 'Stadium UTHM',
-    category: 'Sport',
-    clubName: 'Student Council',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1533174072545-e8d4aa97edf9?auto=format&fit=crop&q=80',
-    description: 'Larian malam 5KM dengan tema neon.',
-    approval: 'Pending', 
-    maxParticipants: 500,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-4',
-    title: 'International Cultural Food Fest',
-    date: '2026-09-30',
-    time: '10:00 to 22:00',
-    location: 'Dataran Kawad',
-    category: 'Arts',
-    clubName: 'International Student Society',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80',
-    description: 'Pesta makanan antarabangsa. Masuk percuma!',
-    approval: 'Approved',
-    maxParticipants: 0,
-    isWalkIn: true 
-  },
-  {
-    id: 'evt-5',
-    title: 'Career Fair 2025: Engineering',
-    date: '2026-10-25',
-    time: '09:00 to 16:00',
-    location: 'Dewan Tunku Mahkota Ismail',
-    category: 'Career',
-    clubName: 'Career Centre',
-    createdBy: 'demo-staff',
-    poster: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&q=80',
-    description: 'Temuduga terbuka bersama syarikat kejuruteraan terkemuka.',
-    approval: 'Approved',
-    maxParticipants: 1000,
-    isWalkIn: true
-  },
-  {
-    id: 'evt-6',
-    title: 'Mental Health Workshop',
-    date: '2025-10-05',
-    time: '14:00 to 16:00',
-    location: 'Bilik Seminar Perpustakaan',
-    category: 'Welfare',
-    clubName: 'Counseling Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1544027993-37dbfe43562a?auto=format&fit=crop&q=80',
-    description: 'Bengkel pengurusan stres untuk pelajar tahun akhir.',
-    approval: 'Approved',
-    maxParticipants: 50,
-    isWalkIn: false
-  },
-  // --- PAST EVENTS ---
-  {
-    id: 'evt-7',
-    title: 'Photography Masterclass',
-    date: '2025-09-15',
-    time: '08:00 to 12:00',
-    location: 'Taman Universiti',
-    category: 'Workshop',
-    clubName: 'Media Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80',
-    description: 'Belajar teknik fotografi outdoor.',
-    approval: 'Approved',
-    maxParticipants: 30,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-8',
-    title: 'Debate Championship Finals',
-    date: '2025-11-20',
-    time: '20:00 to 23:00',
-    location: 'Dewan Kuliah 1',
-    category: 'Academic',
-    clubName: 'Debate Team',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80',
-    description: 'Pusingan akhir debat antara fakulti.',
-    approval: 'Approved',
-    maxParticipants: 200,
-    isWalkIn: false
-  },
-  // --- EVENTS BULAN INI (Untuk Kalendar) ---
-  {
-    id: 'evt-9',
-    title: 'Java Coding Bootcamp',
-    date: new Date().toISOString().split('T')[0], // HARI INI
-    time: '08:00 to 17:00',
-    location: 'Makmal Komputer 3',
-    category: 'Workshop',
-    clubName: 'Computer Science Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80',
-    description: 'Bengkel intensif Java untuk pemula.',
-    approval: 'Approved',
-    maxParticipants: 40,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-10',
-    title: 'Futsal Friendly Match',
-    date: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString().split('T')[0], // +3 HARI
-    time: '17:00 to 19:00',
-    location: 'Gelanggang Futsal Kolej',
-    category: 'Sport',
-    clubName: 'Sports Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&q=80',
-    description: 'Perlawanan persahabatan antara kolej.',
-    approval: 'Approved',
-    maxParticipants: 20,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-11',
-    title: 'Islamic Talk: Exam Prep',
-    date: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString().split('T')[0], // +7 HARI
-    time: '19:00 to 21:00',
-    location: 'Masjid UTHM',
-    category: 'Religious',
-    clubName: 'Islamic Center',
-    createdBy: 'demo-staff',
-    poster: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80',
-    description: 'Persiapan rohani menghadapi peperiksaan akhir.',
-    approval: 'Approved',
-    maxParticipants: 300,
-    isWalkIn: true
-  },
-  {
-    id: 'evt-12',
-    title: 'Entrepreneurship 101',
-    date: new Date(new Date().setDate(new Date().getDate() + 10)).toISOString().split('T')[0], // +10 HARI
-    time: '09:00 to 12:00',
-    location: 'PTTA',
-    category: 'Entrepreneur',
-    clubName: 'Business Club',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&q=80',
-    description: 'Cara memulakan bisnes di kampus.',
-    approval: 'Approved',
-    maxParticipants: 50,
-    isWalkIn: false
-  },
-  // --- NEW EVENTS FOR JAN 2025 ---
-  {
-    id: 'evt-13',
-    title: 'New Year Code Jam 2025',
-    date: '2026-01-01',
-    time: '09:00 to 21:00',
-    location: 'Makmal Komputer Pusat',
-    category: 'Workshop',
-    clubName: 'Computer Science Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&q=80',
-    description: 'Kickstart the year with a 12-hour coding marathon. Open to all levels.',
-    approval: 'Approved',
-    maxParticipants: 60,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-14',
-    title: 'Varsity Chess Open',
-    date: '2026-01-03',
-    time: '08:00 to 18:00',
-    location: 'Dewan Peperiksaan',
-    category: 'Sport',
-    clubName: 'Strategy Games Club',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&q=80',
-    description: 'Checkmate your way to victory. Prizes worth RM500.',
-    approval: 'Approved',
-    maxParticipants: 40,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-15',
-    title: 'Digital Art Exhibition: Future',
-    date: '2026-01-05',
-    time: '10:00 to 17:00',
-    location: 'Galeri Seni UTHM',
-    category: 'Arts',
-    clubName: 'Creative Arts Society',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?auto=format&fit=crop&q=80',
-    description: 'Showcasing student artwork on the theme of "Future Malaysia".',
-    approval: 'Approved',
-    maxParticipants: 0,
-    isWalkIn: true
-  },
-  {
-    id: 'evt-16',
-    title: 'Charity Fun Run: Food Bank',
-    date: '2026-01-07',
-    time: '07:00 to 11:00',
-    location: 'Stadium UTHM',
-    category: 'Welfare',
-    clubName: 'Rakan Masjid',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1552674605-469523f7009c?auto=format&fit=crop&q=80',
-    description: 'Run for a cause. All registration fees go to the student food bank.',
-    approval: 'Approved',
-    maxParticipants: 200,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-17',
-    title: 'Resume Writing Workshop',
-    date: '2026-01-10',
-    time: '14:00 to 17:00',
-    location: 'Bilik Seminar 1',
-    category: 'Career',
-    clubName: 'Career Centre',
-    createdBy: 'demo-staff',
-    poster: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&q=80',
-    description: 'Learn how to craft a winning resume for your internship applications.',
-    approval: 'Approved',
-    maxParticipants: 80,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-18',
-    title: 'Inter-Faculty Debate',
-    date: '2026-01-12',
-    time: '20:00 to 23:00',
-    location: 'Dewan Kuliah 2',
-    category: 'Academic',
-    clubName: 'Debate Team',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&q=80',
-    description: 'Topic: "AI in Education: Boon or Bane?". Come watch the showdown.',
-    approval: 'Approved',
-    maxParticipants: 150,
-    isWalkIn: true
-  },
-  {
-    id: 'evt-19',
-    title: 'Robotics Showcase 2025',
-    date: '2026-01-15',
-    time: '09:00 to 16:00',
-    location: 'Foyer FKMP',
-    category: 'Academic',
-    clubName: 'Robotics Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1561557944-6e7860d1a7eb?auto=format&fit=crop&q=80',
-    description: 'See the latest robots built by UTHM engineering students.',
-    approval: 'Approved',
-    maxParticipants: 0,
-    isWalkIn: true
-  },
-  {
-    id: 'evt-20',
-    title: 'Traditional Music Night',
-    date: '2026-01-18',
-    time: '20:30 to 23:00',
-    location: 'Dewan Sultan Ibrahim',
-    category: 'Arts',
-    clubName: 'Cultural Club',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80',
-    description: 'A night of Gamelan and Zapin performances.',
-    approval: 'Approved',
-    maxParticipants: 400,
-    isWalkIn: false
-  },
-{
-  id: 'evt-21',
-  title: 'Startup Pitching Day',
-  date: '2026-01-20',
-  time: '09:00 AM to 02:00 PM',
-  location: 'Technopreneur Centre, UTHM',
-  category: 'Entrepreneur',
-  clubName: 'Business Club',
-  createdBy: 'demo-club',
-  poster: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&q=80',
-  description: `🚀 UTHM Startup Pitching Day
-  Pitch your business idea to real investors.
-
-  Welcome, Founder! You are one step away from presenting your vision. Please read the following carefully before registering:
-
-  ⏱️ The 5-Minute Rule: You have exactly 5 minutes to convince the judges. Practice your timing!
-  📂 Deck Upload: Your final pitch deck is required by 15 Jan 2026. No changes allowed after submission. Google Drive Link will be given after you joining the whatsapp group.
-  💼 Attire: Business Casual / Formal (First impressions count!).
-  🎓 Workshop: By registering, you agree to attend the mandatory 'Pitching Masterclass' on 12 Jan 2026.
-
-  *Final Task: Please prepare a one-sentence summary (Elevator Pitch) of your startup for the registration form.`,
-    approval: 'Approved',
-    maxParticipants: 30,
-    isWalkIn: false,
-    formConfig: {
-      requireMatric: true,
-      requireFaculty: true,
-      requireTshirt: false,
-      requirePayment: false,
-      requireIC: false,
-      externalLink: 'https://chat.whatsapp.com/demo-pitching-day'
-    }
-  },
-{
-    id: 'evt-22',
-    title: 'Mental Health Awareness',
-    date: '2026-01-22',
-    time: '10:00 AM to 12:00 PM',
-    location: 'Dewan Tunku Ibrahim Ismail',
-    category: 'Welfare',
-    clubName: 'Counseling Unit',
-    createdBy: 'demo-staff',
-    poster: 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&q=80',
-    description: 'Coping mechanisms for final exam stress.',
-    approval: 'Approved',
-    maxParticipants: 100,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-23',
-    title: 'Badminton Tournament',
-    date: '2026-01-25',
-    time: '08:00 to 18:00',
-    location: 'Sports Complex',
-    category: 'Sport',
-    clubName: 'Sports Club',
-    createdBy: 'demo-club',
-    poster: 'https://images.unsplash.com/photo-1626224583764-8478ab2e153d?auto=format&fit=crop&q=80',
-    description: 'Singles and Doubles categories available. Register now!',
-    approval: 'Approved',
-    maxParticipants: 60,
-    isWalkIn: false
-  },
-  {
-    id: 'evt-24',
-    title: 'Public Speaking Masterclass',
-    date: '2026-01-28',
-    time: '14:00 to 18:00',
-    location: 'Bilik Kuliah 5',
-    category: 'Leadership',
-    clubName: 'Toastmasters UTHM',
-    createdBy: 'demo-club-2',
-    poster: 'https://images.unsplash.com/photo-1544531696-cb478dc98ecb?auto=format&fit=crop&q=80',
-    description: 'Overcome stage fright and speak with confidence.',
-    approval: 'Approved',
-    maxParticipants: 40,
-    isWalkIn: false
+const createSystemNotification = async (db, appId, userId, message) => {
+  try {
+    await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'notifications'), {
+      message,
+      isRead: false,
+      timestamp: serverTimestamp()
+    });
+  } catch (e) {
+    console.error("Failed to create notification", e);
   }
-];
+};
 
+// SECTION FIREBASE CONFIGURATION & INITIALIZATION
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_GOOGLE_API_KEY, 
+  authDomain: "uthm-css-7741c.firebaseapp.com",
+  projectId: "uthm-css-7741c",
+  storageBucket: "uthm-css-7741c.firebasestorage.app",
+  messagingSenderId: "939603396742",
+  appId: "1:939603396742:web:31576357a74a333879a907"
+};
 
-// -----------------------------------------------------------------------------
-// [SECTION] CONTEXT SETUP
-// -----------------------------------------------------------------------------
+const appId = 'uthm-css-7741c'; 
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+// SECTION CONTEXT SETUP
 const AppContext = createContext();
 
-// -----------------------------------------------------------------------------
-// [SECTION] COMPONENT: NAVBAR (TOP BAR)
-// -----------------------------------------------------------------------------
+// SECTION COMPONENT: NAVIGATE BAR (TOP BAR)
 const Navbar = () => {
   const { view, setView, user, handleLogout } = useContext(AppContext);
     
@@ -473,7 +137,6 @@ const Navbar = () => {
           <h1 className="text-white font-black text-lg leading-tight tracking-tighter uppercase drop-shadow-md">UTHM EVENT<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">PULSE</span></h1>
         </div>
         
-        {/* Mobile Auth Button */}
         <div className="md:hidden">
             {isLoggedIn ? (
               <button onClick={handleLogout} className="p-2 rounded-xl text-rose-300 border border-rose-500/30 hover:bg-rose-500/20 bg-rose-900/10">
@@ -489,7 +152,7 @@ const Navbar = () => {
 
       <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto px-2 justify-start md:justify-center">
         {isLoggedIn ? (
-          // LOGGED IN MENU
+
           [
             { id: 'home', label: 'HOME', icon: <HomeIcon size={18} /> },
             { id: 'calendar', label: 'CALENDAR', icon: <CalendarIcon size={18} /> },
@@ -509,7 +172,7 @@ const Navbar = () => {
             </button>
           ))
         ) : (
-          // PUBLIC / GUEST MENU
+
           <>
             <button 
               onClick={() => setView('home')} 
@@ -524,7 +187,7 @@ const Navbar = () => {
               <Search size={18} /> EVENTS
             </button>
             <button 
-              onClick={() => setView('about')} // Add this handler
+              onClick={() => setView('about')} 
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-[10px] md:text-xs tracking-widest transition-all duration-300 whitespace-nowrap shrink-0 ${view === 'about' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'}`}
             >
               <Info size={18} /> ABOUT US
@@ -548,13 +211,10 @@ const Navbar = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] VIEW: HOME (LANDING PAGE)
-// -----------------------------------------------------------------------------
+// SECTION VIEW: HOMEPAGE
 const HomeView = () => {
   const { events, setView, setSelectedEvent, getCategoryTheme } = useContext(AppContext);
 
-  // 1. Mock events (Kekal UI asal anda)
   const mockEvents = [
     {
       id: 'mock-1',
@@ -585,12 +245,10 @@ const HomeView = () => {
     }
   ];
 
-  // 2. Logic Pagination (Add-on baru)
   const [startIndex, setStartIndex] = useState(0);
   const [direction, setDirection] = useState('right');
   const ITEMS_PER_PAGE = 4;
 
-  // 3. Memoized Split (Kekal logik asal anda tapi buang .slice supaya Carousel boleh guna semua data)
   const { upcomingEvents, pastEvents } = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -602,20 +260,18 @@ const HomeView = () => {
     const upcoming = events
       .filter(e => e.approval === 'Approved' && new Date(e.date) >= now)
       .sort((a, b) => new Date(a.date) - new Date(b.date));
-      // Kita tak slice di sini supaya carousel nampak semua event
-
+    
     const past = events
       .filter(e => {
         const d = new Date(e.date);
         return e.approval === 'Approved' && d < now && d >= threeMonthsAgo;
       })
-      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .sort((a, b) => new Date(b.date) - new Date(a.date)) 
       .slice(0, 3); 
 
     return { upcomingEvents: upcoming, pastEvents: past };
   }, [events]);
 
-  // Handle Navigation
   const handleNext = () => {
     setDirection('right');
     if (startIndex + ITEMS_PER_PAGE >= upcomingEvents.length) {
@@ -639,8 +295,7 @@ const HomeView = () => {
 
   return (
     <div className="flex flex-col min-h-full pb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
-      {/* 1. HERO SECTION (Kekal asal) */}
+
       <div className="relative w-full min-h-[550px] flex items-center justify-center text-center p-8 overflow-hidden">
          <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-slate-900 to-black z-0"></div>
          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-30 z-0 mix-blend-overlay"></div>
@@ -665,7 +320,6 @@ const HomeView = () => {
          </div>
       </div>
 
-      {/* 2. UPCOMING EVENTS SECTION (Carousel Mode) */}
       <div className="px-6 md:px-12 max-w-7xl mx-auto w-full -mt-24 relative z-20">
           <div className="flex justify-center mb-8">
             <div className="mt-28 bg-white/10 backdrop-blur-sm border border-white/40 p-1 rounded-3xl shadow-2xl">
@@ -675,10 +329,8 @@ const HomeView = () => {
             </div>
           </div>
 
-          {/* Carousel Wrapper */}
           <div className="relative px-2 md:px-14">
-            
-            {/* Left Arrow */}
+
            {upcomingEvents.length > 4 && (
               <button 
                 onClick={handlePrev}
@@ -688,18 +340,16 @@ const HomeView = () => {
               </button>
             )}
 
-            {/* Grid Container */}
            <div 
               key={startIndex} 
               className={`grid grid-cols-1 md:grid-cols-4 gap-6 animate-in fade-in duration-500 ${direction === 'right' ? 'slide-in-from-right-8' : 'slide-in-from-left-8'}`}
             >
-            
                {visibleUpcoming.map((event, idx) => {
                    const theme = getCategoryTheme(event.category);
                    const dateObj = event.date ? new Date(event.date) : new Date();
                    const month = dateObj.toLocaleString('default', { month: 'short' });
                    const dayNum = dateObj.getDate();
-                   const dayName = dateObj.toLocaleString('default', { weekday: 'short' }).toUpperCase();
+                   const dayName = dateObj.toLocaleString('default', { weekday: 'short' }).toUpperCase(); 
 
                    return (
                     <div key={event.id || idx} className="bg-white p-4 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col group hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500 h-full">
@@ -712,7 +362,7 @@ const HomeView = () => {
                                     <span className="text-[10px] font-black uppercase tracking-widest">No Image</span>
                                 </div>
                             )}
-                
+
                             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-xl font-black text-xs shadow-lg uppercase tracking-wider text-slate-800 flex flex-col items-center leading-none">
                                 <span className="text-[10px] text-slate-400 mb-1">{month}</span>
                                 <span className="text-xl text-indigo-600">{dayNum}</span>
@@ -745,11 +395,15 @@ const HomeView = () => {
                            </div>
                         </div>
                     </div>
-                  ); 
-                })} 
-              </div>
+                   ); 
+               })} 
+               {upcomingEvents.length === 0 && (
+                <div className="col-span-full text-center py-20 text-slate-400 font-bold bg-white/50 rounded-3xl border border-dashed border-slate-300">
+                    No upcoming events scheduled.
+                </div>
+               )}
+             </div>
 
-            {/* Right Arrow */}
            {upcomingEvents.length > 3 && (
               <button 
                 onClick={handleNext}
@@ -760,7 +414,6 @@ const HomeView = () => {
             )}
           </div>
 
-          {/* Dots Indicator */}
           {upcomingEvents.length > 3 && (
             <div className="flex justify-center gap-2 mt-8">
               {Array.from({ length: Math.ceil(upcomingEvents.length / ITEMS_PER_PAGE) }).map((_, i) => (
@@ -772,7 +425,6 @@ const HomeView = () => {
             </div>
           )}
 
-          {/* 3. RECENTLY CONCLUDED (Kekal asal) */}
           {pastEvents.length > 0 && (
             <div className="mt-20">
                 <div className="bg-slate-200/50 backdrop-blur-sm border border-slate-200 p-1 rounded-3xl inline-block mb-8">
@@ -782,6 +434,7 @@ const HomeView = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 opacity-70 hover:opacity-100 transition-opacity duration-500 grayscale hover:grayscale-0">
                     {pastEvents.map((event, idx) => {
+                        const theme = getCategoryTheme(event.category);
                         const dateObj = event.date ? new Date(event.date) : new Date();
                         const month = dateObj.toLocaleString('default', { month: 'short' });
                         const dayNum = dateObj.getDate();
@@ -824,9 +477,7 @@ const HomeView = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] VIEW: CALENDAR
-// -----------------------------------------------------------------------------
+// SECTION VIEW: CALENDAR
 
 const CalendarView = () => {
   const { events, setSelectedEvent, setView, currentMonth, setCurrentMonth } = useContext(AppContext);
@@ -861,21 +512,17 @@ const CalendarView = () => {
             const currentDayStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
             const currentDayDate = new Date(currentDayStr);
 
-            // Filter for events that happen on OR span across this day
             const dayEvents = events.filter(e => {
                 if(e.approval !== 'Approved') return false;
                 
                 const start = new Date(e.date);
-                // If dateEnd doesn't exist, use e.date (1-day event)
-                const end = e.dateEnd ? new Date(e.dateEnd) : new Date(e.date);
+                const end = e.dateEnd ? new Date(e.dateEnd) : start;
                 
-                // Normalize dates to midnight for accurate comparison
                 start.setHours(0,0,0,0);
                 end.setHours(0,0,0,0);
-                const checkDay = new Date(currentDayDate);
-                checkDay.setHours(0,0,0,0);
+                currentDayDate.setHours(0,0,0,0);
 
-                return checkDay >= start && checkDay <= end;
+                return currentDayDate >= start && currentDayDate <= end;
             });
 
             return (
@@ -898,11 +545,9 @@ const CalendarView = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] VIEW: BROWSE EVENTS
-// -----------------------------------------------------------------------------
+// SECTION VIEW: BROWSE EVENTS
 const BrowseView = () => {
-  const { events, setSelectedEvent, setView, searchQuery, setSearchQuery, categoryFilter, setCategoryFilter } = useContext(AppContext);
+  const { events, setSelectedEvent, setView, search, setSearch, categoryFilter, setCategoryFilter } = useContext(AppContext);
     
   const categories = [
   'All', 
@@ -917,23 +562,18 @@ const BrowseView = () => {
   'Career'
 ];
   
-  // [UPDATED] Filtering logic: Exclude events older than 3 months
   const filtered = events.filter(e => {
     const eventDate = new Date(e.date);
-    const now = new Date();
     const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(now.getMonth() - 3);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    threeMonthsAgo.setHours(0,0,0,0); 
     
     const isApproved = e.approval === 'Approved';
-    
-    // If you want to see ALL future events and only hide VERY old ones:
-    const isRecentOrFuture = eventDate >= threeMonthsAgo; 
-
+    const isNotTooOld = eventDate >= threeMonthsAgo;
     const matchesCategory = categoryFilter === 'All' || e.category === categoryFilter;
-    const matchesSearch = e.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        (e.clubName && e.clubName.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase()) || (e.clubName && e.clubName.toLowerCase().includes(search.toLowerCase()));
 
-    return isApproved && isRecentOrFuture && matchesCategory && matchesSearch;
+    return isApproved && isNotTooOld && matchesCategory && matchesSearch;
   });
 
   return (
@@ -949,7 +589,7 @@ const BrowseView = () => {
       <div className="bg-white/70 backdrop-blur-xl p-4 rounded-[2rem] shadow-lg border border-white/60 flex gap-4 ring-1 ring-indigo-100">
         <div className="relative flex-1">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by name club, keyword..." className="w-full pl-16 pr-6 py-5 bg-slate-50/50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 font-bold text-sm transition-all" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name club, keyword..." className="w-full pl-16 pr-6 py-5 bg-slate-50/50 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/50 font-bold text-sm transition-all" />
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -981,12 +621,10 @@ const BrowseView = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] VIEW: DETAILED EVENT
-// -----------------------------------------------------------------------------
+// SECTION VIEW: DETAILED EVENT
 const DetailedView=()=>{
   const { selectedEvent, setView, profile, registrations, user, notify } = useContext(AppContext);
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [countdown, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   if (!selectedEvent) return null;
 
@@ -1003,7 +641,6 @@ const DetailedView=()=>{
     );
   }
   
-  // Timer Logic
   useEffect(() => {
     if (!selectedEvent?.date) return;
     const targetDate = new Date(selectedEvent.date);
@@ -1030,11 +667,9 @@ const DetailedView=()=>{
   const formatFullDate = (dateStr) => {
      if (!dateStr) return '';
      const dateObj = new Date(dateStr);
-     // Format: "Tuesday, 30 Dec 2025"
      return dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  // --- Logic for Date Display (Multi-day) ---
   const displayDate = selectedEvent.dateEnd && selectedEvent.dateEnd !== selectedEvent.date 
     ? `${formatFullDate(selectedEvent.date)} - ${formatFullDate(selectedEvent.dateEnd)}` 
     : formatFullDate(selectedEvent.date);
@@ -1051,7 +686,7 @@ const DetailedView=()=>{
             <h2 className="text-5xl font-black uppercase tracking-tight mb-4 drop-shadow-xl">{selectedEvent.title}</h2>
             <div className="flex flex-col md:flex-row items-center justify-center gap-6 my-8">
                <div className="flex gap-4 text-center">
-                  {[{ label: 'Days', val: timeLeft.days }, { label: 'Hours', val: timeLeft.hours }, { label: 'Mins', val: timeLeft.minutes }, { label: 'Secs', val: timeLeft.seconds }].map((t, i) => (
+                  {[{ label: 'Days', val: countdown.days }, { label: 'Hours', val: countdown.hours }, { label: 'Mins', val: countdown.minutes }, { label: 'Secs', val: countdown.seconds }].map((t, i) => (
                     <div key={i} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-3 min-w-[70px]"><div className="text-2xl font-black text-white">{t.val}</div><div className="text-[9px] uppercase tracking-widest text-indigo-200">{t.label}</div></div>
                   ))}
                </div>
@@ -1085,7 +720,7 @@ const DetailedView=()=>{
             {profile?.role === 'club' ? (
               <div className="p-6 bg-slate-50 rounded-2xl text-center text-slate-400 font-bold text-sm italic border border-dashed border-slate-200">Clubs manage event data via their Profile Dashboard.</div>
             ) : (() => {
-              // --- WALK-IN CHECK ---
+
               if (selectedEvent.isWalkIn) {
                  return (
                     <div className="w-full bg-emerald-50 text-emerald-600 py-6 rounded-[1.5rem] font-black text-xl border-2 border-dashed border-emerald-200 text-center uppercase tracking-widest flex flex-col items-center gap-2">
@@ -1095,9 +730,7 @@ const DetailedView=()=>{
                  );
               }
 
-              // --- REGISTRATION DEADLINE CHECK ---
-              // Use regDeadline if available, otherwise fallback to event date
-              const deadlineDate = selectedEvent.regDeadline ? new Date(selectedEvent.regDeadline) : new Date(selectedEvent.date);
+              const deadlineDate = selectedEvent.deadline ? new Date(selectedEvent.deadline) : new Date(selectedEvent.date);
               deadlineDate.setHours(23, 59, 59, 999); // End of the day
               const today = new Date();
               const isDateClosed = today > deadlineDate;
@@ -1120,11 +753,10 @@ const DetailedView=()=>{
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] FORM: REGISTRATION
-// -----------------------------------------------------------------------------
+
+// SECTION FORM: REGISTRATION
 const RegistrationForm = () => {
-  const { selectedEvent, profile, user, setView, registrations, setRegistrations, checkEventCapacity, notify, uploadFile } = useContext(AppContext);
+  const { selectedEvent, profile, user, setView, registrations, checkCapacity, notify, uploadFile } = useContext(AppContext);
   const [uploading, setUploading] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -1132,11 +764,10 @@ const RegistrationForm = () => {
 
   const isGuest = !user || user.isAnonymous;
   
-  // Check for existing registration
-  const existingReg = registrations.find(r => r.eventId === selectedEvent?.id && r.userId === user?.uid);
-  const isEditMode = !!existingReg;
+  const existReg = registrations.find(r => r.eventId === selectedEvent?.id && r.userId === user?.uid);
+  const isEdit = !!existReg;
   
-  const isFull = selectedEvent && !isEditMode ? !checkEventCapacity(selectedEvent) : false;
+  const isFull = selectedEvent && !isEdit ? !checkCapacity(selectedEvent) : false;
 
   const config = selectedEvent?.formConfig || {
     requireMatric: true,
@@ -1147,7 +778,6 @@ const RegistrationForm = () => {
     externalLink: ''
   };
 
-  // SUCCESS VIEW
   if (isSuccess) return (
     <div className="p-8 max-w-xl mx-auto animate-in zoom-in-95 duration-500">
        <div className="bg-white/90 backdrop-blur-2xl p-16 rounded-[4rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-white text-center space-y-8 relative overflow-hidden">
@@ -1158,7 +788,7 @@ const RegistrationForm = () => {
          <div className="space-y-2">
            <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight">Success!</h2>
            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest italic">
-             {isEditMode ? 'Registration Updated' : 'Registration Recorded'}
+             {isEdit ? 'Registration Updated' : 'Registration Recorded'}
            </p>
          </div>
          <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 space-y-4">
@@ -1198,11 +828,11 @@ const RegistrationForm = () => {
     <div className="p-8 max-w-xl mx-auto animate-in zoom-in-95 duration-500">
       <div className="bg-white/80 backdrop-blur-2xl p-12 rounded-[3.5rem] shadow-2xl border border-white/60">
         <h2 className="text-3xl font-black mb-2 uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-indigo-900">
-          {isEditMode ? 'EDIT REGISTRATION' : (isGuest ? 'GUEST REGISTRATION' : 'STUDENT REGISTRATION')}
+          {isEdit ? 'EDIT REGISTRATION' : (isGuest ? 'GUEST REGISTRATION' : 'STUDENT REGISTRATION')}
         </h2>
         <p className="text-indigo-600 font-black mb-10 uppercase text-xs tracking-widest leading-none">{selectedEvent?.title}</p>
         
-        {isFull && !isEditMode && (
+        {isFull && !isEdit && (
           <div className="mb-8 p-6 bg-rose-50 border-l-4 border-rose-500 rounded-2xl flex items-start gap-4 shadow-sm">
             <AlertCircle className="text-rose-500 mt-1" size={20} />
             <div>
@@ -1217,18 +847,16 @@ const RegistrationForm = () => {
         <form onSubmit={async (e) => {
           e.preventDefault();
           const f = e.target;
-          // If capacity full and not editing, block
-          if (isFull && !isEditMode) { notify("Event is full!", "error"); return; }
-           
+          if (isFull && !isEdit) { notify("Event is full!", "error"); return; }
+            
           setUploading(true);
           try {
-            let receiptUrl = existingReg?.receiptUrl || ''; // Default to existing receipt
+            let receiptUrl = existReg?.receiptUrl || '';
             if (config.requirePayment && receiptFile) {
                 receiptUrl = await uploadFile(receiptFile, 'receipts');
             }
 
-            // DYNAMIC ID LOGIC
-            let finalRegId = existingReg?.registerId || '';
+            let finalRegId = existReg?.registerId || '';
             if (!finalRegId) {
                 if (!isGuest) {
                    finalRegId = config.requireMatric ? (f.matric?.value || profile?.matric || 'STUDENT') : (profile?.matric || 'STUDENT');
@@ -1238,7 +866,6 @@ const RegistrationForm = () => {
             }
 
             const regData = {
-              id: existingReg ? existingReg.id : `reg-${Date.now()}`,
               fullName: f.fullName.value,
               email: f.email.value,
               phone: isGuest ? f.phone.value : (profile?.phone || 'N/A'),
@@ -1252,21 +879,19 @@ const RegistrationForm = () => {
               userId: user?.uid || 'guest-user',
               isOutsider: isGuest,
               registerId: finalRegId,
-              paymentStatus: config.requirePayment ? (isEditMode ? existingReg.paymentStatus : 'Pending') : 'N/A', // Don't reset verified status on edit
+              paymentStatus: config.requirePayment ? (isEdit ? existReg.paymentStatus : 'Pending') : 'N/A', // Don't reset verified status on edit
               status: 'Active',
-              attendance: isEditMode ? existingReg.attendance : false,
+              attendance: isEdit ? existReg.attendance : false,
               receiptUrl,
-              timestamp: isEditMode ? existingReg.timestamp : new Date(), // Keep original timestamp or update? Usually keep original for registration time.
-              lastUpdated: new Date()
+              timestamp: isEdit ? existReg.timestamp : serverTimestamp(), 
+              lastUpdated: serverTimestamp()
             };
 
-            if (isEditMode) {
-                // UPDATE LOCAL STATE
-                setRegistrations(prev => prev.map(r => r.id === existingReg.id ? regData : r));
+            if (isEdit) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', existReg.id), regData);
                 notify("Registration updated!");
             } else {
-                // ADD LOCAL STATE
-                setRegistrations(prev => [...prev, regData]);
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'registrations'), regData);
                 notify("Registration successful! See you there.");
             }
             
@@ -1278,24 +903,24 @@ const RegistrationForm = () => {
           
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Full Name</label>
-            <input name="fullName" defaultValue={existingReg?.fullName || profile?.fullName} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+            <input name="fullName" defaultValue={existReg?.fullName || profile?.fullName} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Email Address</label>
-            <input name="email" type="email" defaultValue={existingReg?.email || profile?.email} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+            <input name="email" type="email" defaultValue={existReg?.email || profile?.email} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
           </div>
 
           {isGuest && (
              <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Phone Number</label>
-              <input name="phone" defaultValue={existingReg?.phone} placeholder="012-3456789" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+              <input name="phone" defaultValue={existReg?.phone} placeholder="012-3456789" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
             </div>
           )}
 
           {config.requireIC && (
              <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">IC Number / ID</label>
-              <input name="icNumber" defaultValue={existingReg?.icNumber} placeholder="e.g. 012345-01-1234" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+              <input name="icNumber" defaultValue={existReg?.icNumber} placeholder="e.g. 012345-01-1234" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
             </div>
           )}
 
@@ -1303,13 +928,13 @@ const RegistrationForm = () => {
             {config.requireMatric && (
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Matric Number</label>
-                <input name="matric" defaultValue={existingReg?.matric} placeholder="e.g. AB12345" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
+                <input name="matric" defaultValue={existReg?.matric} placeholder="e.g. AB12345" required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm" />
               </div>
             )}
             {config.requireFaculty && (
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Faculty</label>
-                <select name="faculty" defaultValue={existingReg?.faculty} className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm">
+                <select name="faculty" defaultValue={existReg?.faculty} className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm">
                   <option>FKMP</option><option>FSKTM</option><option>FKEE</option><option>FKAAB</option><option>FAST</option><option>FPTP</option><option>FPTV</option>
                 </select>
               </div>
@@ -1319,7 +944,7 @@ const RegistrationForm = () => {
           {config.requireTshirt && (
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">T-shirt Size</label>
-              <select name="tshirt" defaultValue={existingReg?.tshirt} className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm">
+              <select name="tshirt" defaultValue={existReg?.tshirt} className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-sm">
                 <option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option>
               </select>
             </div>
@@ -1328,10 +953,10 @@ const RegistrationForm = () => {
           {config.requirePayment && (
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">
-                  Registration Fee Receipt {isEditMode && existingReg?.receiptUrl && "(Re-upload to change)"}
+                  Registration Fee Receipt {isEdit && existReg?.receiptUrl && "(Re-upload to change)"}
               </label>
               <div className={`w-full p-8 border-4 border-dashed rounded-2xl flex flex-col items-center justify-center text-slate-300 transition relative overflow-hidden ${receiptFile ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 hover:bg-white/50'}`}>
-                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => setReceiptFile(e.target.files[0])} accept="image/*,application/pdf" required={!isEditMode && !existingReg?.receiptUrl} />
+                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => setReceiptFile(e.target.files[0])} accept="image/*,application/pdf" required={!isEdit && !existReg?.receiptUrl} />
                 {receiptFile ? (
                     <div className="text-center text-indigo-600">
                         <CheckCircle2 size={32} className="mx-auto mb-2 text-green-500"/>
@@ -1339,7 +964,7 @@ const RegistrationForm = () => {
                     </div>
                 ) : (
                     <>
-                      {isEditMode && existingReg?.receiptUrl ? (
+                      {isEdit && existReg?.receiptUrl ? (
                           <div className="text-center">
                               <CheckCircle2 size={32} className="mx-auto mb-2 text-indigo-300"/>
                               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Previous Receipt Uploaded</span>
@@ -1360,11 +985,11 @@ const RegistrationForm = () => {
             <button type="button" onClick={() => setView('detail')} className="flex-1 text-slate-400 font-black text-xs uppercase hover:text-slate-600 transition">Cancel</button>
             <button 
               type="submit" 
-              disabled={(isFull && !isEditMode) || uploading}
-              className={`flex-[2] py-5 rounded-[1.5rem] font-black text-lg shadow-xl hover:shadow-2xl transition flex items-center justify-center gap-2 ${(isFull && !isEditMode) || uploading ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:scale-[1.02] shadow-indigo-500/30'}`}
+              disabled={(isFull && !isEdit) || uploading}
+              className={`flex-[2] py-5 rounded-[1.5rem] font-black text-lg shadow-xl hover:shadow-2xl transition flex items-center justify-center gap-2 ${(isFull && !isEdit) || uploading ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:scale-[1.02] shadow-indigo-500/30'}`}
             >
               {uploading && <Loader2 size={20} className="animate-spin"/>}
-              {isEditMode ? "UPDATE DETAILS" : "REGISTER"}
+              {isEdit ? "Save Changes" : "REGISTER"}
             </button>
           </div>
         </form>
@@ -1373,25 +998,20 @@ const RegistrationForm = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] FORM: CREATE/EDIT EVENT
-// -----------------------------------------------------------------------------
+// SECTION FORM: CREATE/EDIT EVENT
 
 const CreateEditEvent = () => {
-  const { selectedEvent, user, events, setEvents, profile, setView, notify, uploadFile, registrations } = useContext(AppContext);
+  const { selectedEvent, user, events, profile, setView, notify, uploadFile, registrations } = useContext(AppContext);
   const [uploading, setUploading] = useState(false);
   const [posterFile, setPosterFile] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState(null);
 
-  // --- Validation States ---
   const [conflictModal, setConflictModal] = useState(false);
-  const [conflictingEvent, setConflictingEvent] = useState(null);
+  const [clashEvent, setClashEvent] = useState(null);
   const [pendingData, setPendingData] = useState(null);
 
-  // --- New Feature States ---
   const [isWalkIn, setIsWalkIn] = useState(selectedEvent?.isWalkIn || false);
 
-  // Registration Form Preferences State
   const [formConfig, setFormConfig] = useState(selectedEvent?.formConfig || {
     requireMatric: true,
     requireFaculty: true,
@@ -1403,7 +1023,6 @@ const CreateEditEvent = () => {
 
   const toggleConfig = (key) => setFormConfig(prev => ({ ...prev, [key]: !prev[key] }));
 
-  // Logic to parse existing time string "HH:MM to HH:MM" for edit mode
   let defaultStart = '';
   let defaultEnd = '';
   
@@ -1421,17 +1040,15 @@ const CreateEditEvent = () => {
     return h * 60 + m;
   };
 
-  const handlePreSubmit = async (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     const f = e.target;
     
-    // 1. Capture Form Data
     const rawData = {
       title: f.title.value,
-      date: f.date.value,           // Start Date
-      dateEnd: f.dateEnd.value,     // End Date (New)
-      regDeadline: f.regDeadline ? f.regDeadline.value : '', // Custom Deadline (New)
-      timeFrom: f.timeFrom.value,
+      date: f.date.value,         
+      dateEnd: f.dateEnd.value,    
+      deadline: f.deadline ? f.deadline.value : '', 
       timeTo: f.timeTo.value,
       location: f.venue.value,
       category: f.category.value,
@@ -1439,17 +1056,15 @@ const CreateEditEvent = () => {
       description: f.description.value,
       approval: f.approval.value,
       externalLink: f.externalLink ? f.externalLink.value : '',
-      isWalkIn: isWalkIn // Walk-in Status (New)
+      isWalkIn: isWalkIn
     };
 
-    // 2. Overlap Logic (Simplified for Multi-day: Checks strictly if Start Date overlaps for now)
     const newStart = getMinutes(rawData.timeFrom);
     const newEnd = getMinutes(rawData.timeTo);
 
     const overlap = events.find(ev => {
       if (selectedEvent && ev.id === selectedEvent.id) return false;
       
-      // Strict Check: Overlap only calculates based on Start Date matching
       if (ev.date !== rawData.date) return false;
 
       if (!ev.time || !ev.time.includes(' to ')) return false;
@@ -1462,7 +1077,7 @@ const CreateEditEvent = () => {
 
     if (overlap) {
       const [ovStart, ovEnd] = overlap.time.split(' to ');
-      setConflictingEvent({
+      setClashEvent({
         date: overlap.date,
         startTime: ovStart,
         endTime: ovEnd,
@@ -1471,11 +1086,11 @@ const CreateEditEvent = () => {
       setPendingData(rawData); 
       setConflictModal(true);  
     } else {
-      await processFinalSave(rawData);
+      await saveEvent(rawData);
     }
   };
 
-  const processFinalSave = async (data) => {
+  const saveEvent = async (data) => {
     if (!user) return;
     setUploading(true);
     setConflictModal(false);
@@ -1492,14 +1107,12 @@ const CreateEditEvent = () => {
         galleryUrls = [...galleryUrls, ...newUrls];
       }
 
-      // Prepare payload
       const finalPayload = {
-        id: selectedEvent ? selectedEvent.id : `evt-${Date.now()}`,
         title: data.title,
         date: data.date,
-        dateEnd: data.dateEnd || data.date, // Default to start date if empty
-        regDeadline: data.regDeadline,      // Save deadline
-        isWalkIn: data.isWalkIn,            // Save walk-in status
+        dateEnd: data.dateEnd || data.date, 
+        deadline: data.deadline,      
+        isWalkIn: data.isWalkIn,            
         time: `${data.timeFrom} to ${data.timeTo}`,
         location: data.location,
         category: data.category,
@@ -1511,16 +1124,30 @@ const CreateEditEvent = () => {
         poster: posterUrl,
         photos: galleryUrls.join(','),
         formConfig: { ...formConfig, externalLink: data.externalLink },
-        lastModified: new Date()
+        lastModified: serverTimestamp()
       };
 
       if (selectedEvent) {
-        // UPDATE LOCAL STATE
-        setEvents(prev => prev.map(e => e.id === selectedEvent.id ? finalPayload : e));
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', selectedEvent.id), finalPayload);
         notify("Event updated successfully!");
+        if (
+          selectedEvent.date !== finalPayload.date || 
+          selectedEvent.time !== finalPayload.time ||
+          selectedEvent.location !== finalPayload.location
+        ) {
+          const participants = registrations.filter(r => r.eventId === selectedEvent.id);
+          
+          participants.forEach(p => {
+             if (!p.isOutsider && p.userId) {
+                const msg = `UPDATE: Event "${finalPayload.title}" details have changed. Please check the new info.`;
+
+                createSystemNotification(db, appId, p.userId, msg);
+             }
+          });
+          console.log(`System notifications sent to ${participants.length} participants.`);
+        }
       } else {
-        // ADD LOCAL STATE
-        setEvents(prev => [...prev, { ...finalPayload, createdAt: new Date() }]);
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'events'), { ...finalPayload, createdAt: serverTimestamp() });
         notify("New event created!");
       }
       setView('profile');
@@ -1535,8 +1162,7 @@ const CreateEditEvent = () => {
   return (
     <div className="p-8 max-w-2xl mx-auto animate-in zoom-in-95 duration-500 relative">
       
-      {/* CONFLICT MODAL (Kept same as before) */}
-      {conflictModal && conflictingEvent && (
+      {conflictModal && clashEvent && (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setConflictModal(false)}></div>
             <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl relative z-10 border border-slate-200 animate-in zoom-in-95 duration-300">
@@ -1545,13 +1171,13 @@ const CreateEditEvent = () => {
                 </div>
                 <h3 className="text-xl font-black text-center text-slate-800 mb-4 uppercase">Schedule Confirmation</h3>
                 <p className="text-sm text-slate-600 text-center leading-relaxed mb-8">
-                  There is another event scheduled on <span className="font-bold text-slate-900">{conflictingEvent.date}</span> from <span className="font-bold text-slate-900">{conflictingEvent.startTime}</span> to <span className="font-bold text-slate-900">{conflictingEvent.endTime}</span>.
+                  There is another event scheduled on <span className="font-bold text-slate-900">{clashEvent.date}</span> from <span className="font-bold text-slate-900">{clashEvent.startTime}</span> to <span className="font-bold text-slate-900">{clashEvent.endTime}</span>.
                   <br/><br/>
                    Do you want to proceed with creating this event?
                 </p>
                 <div className="flex gap-3">
                     <button onClick={() => setConflictModal(false)} className="flex-1 py-3 rounded-xl border-2 border-slate-100 text-slate-500 font-black text-xs uppercase hover:bg-slate-50 transition">Cancel</button>
-                    <button onClick={() => processFinalSave(pendingData)} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-black text-xs uppercase shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition">Yes, Proceed</button>
+                    <button onClick={() => saveEvent(pendingData)} className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-black text-xs uppercase shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition">Yes, Proceed</button>
                 </div>
             </div>
         </div>
@@ -1560,13 +1186,12 @@ const CreateEditEvent = () => {
       <div className="bg-white/80 backdrop-blur-2xl p-12 rounded-[3.5rem] shadow-2xl border border-white/60">
         <h2 className="text-3xl font-black mb-10 uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-indigo-900">{selectedEvent ? 'EDIT EVENT' : 'CREATE NEW EVENT'}</h2>
         
-        <form onSubmit={handlePreSubmit} className="space-y-6">
+        <form onSubmit={onSubmit} className="space-y-6">
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Event Title*</label>
             <input name="title" defaultValue={selectedEvent?.title} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all" />
           </div>
             
-          {/* POSTER & GALLERY INPUTS (Hidden for brevity, assume same as before) */}
           <div className="space-y-1">
              <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Event Poster</label>
              <div className={`w-full p-6 border-4 border-dashed rounded-2xl flex items-center justify-center relative overflow-hidden transition ${posterFile ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 hover:bg-white/50'}`}>
@@ -1577,10 +1202,8 @@ const CreateEditEvent = () => {
                 </div>
              </div>
           </div>
-          {/* End Poster Input */}
 
 
-          {/* --- NEW DATE LOGIC: START & END DATE --- */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-1">
               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Start Date*</label>
@@ -1594,14 +1217,14 @@ const CreateEditEvent = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Time Start</label>
-                <input name="timeFrom" type="time" defaultValue={defaultStart} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Time End</label>
-                <input name="timeTo" type="time" defaultValue={defaultEnd} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-              </div>
+             <div className="space-y-1">
+               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Time Start</label>
+               <input name="timeFrom" type="time" defaultValue={defaultStart} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+             </div>
+             <div className="space-y-1">
+               <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Time End</label>
+               <input name="timeTo" type="time" defaultValue={defaultEnd} required className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+             </div>
           </div>
 
            <div className="space-y-1">
@@ -1617,7 +1240,6 @@ const CreateEditEvent = () => {
               </select>
             </div>
             
-            {/* Walk-in Logic for Max Participants */}
             {!isWalkIn && (
               <div className="space-y-1 animate-in fade-in">
                 <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Max Participants</label>
@@ -1632,63 +1254,60 @@ const CreateEditEvent = () => {
             <textarea name="description" defaultValue={selectedEvent?.description} rows={4} className="w-full p-5 bg-white/50 border border-slate-100 rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
 
-          {/* --- WALK-IN & REGISTRATION CONFIG --- */}
           <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 space-y-4 shadow-inner">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Settings2 size={16} className="text-indigo-500" />
-                  <h3 className="text-xs font-black text-slate-600 uppercase tracking-widest">Event Type & Registration</h3>
-                </div>
-                
-                {/* WALK-IN TOGGLE */}
-                <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-                  <span className={`text-[10px] font-black uppercase tracking-wider ${isWalkIn ? 'text-indigo-600' : 'text-slate-400'}`}>Walk-in Event?</span>
-                  <input type="checkbox" checked={isWalkIn} onChange={() => setIsWalkIn(!isWalkIn)} className="accent-indigo-600 w-4 h-4" />
-                </label>
-              </div>
+             <div className="flex items-center justify-between mb-2">
+               <div className="flex items-center gap-2">
+                 <Settings2 size={16} className="text-indigo-500" />
+                 <h3 className="text-xs font-black text-slate-600 uppercase tracking-widest">Event Type & Registration</h3>
+               </div>
+               
+               <label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                 <span className={`text-[10px] font-black uppercase tracking-wider ${isWalkIn ? 'text-indigo-600' : 'text-slate-400'}`}>Walk-in Event?</span>
+                 <input type="checkbox" checked={isWalkIn} onChange={() => setIsWalkIn(!isWalkIn)} className="accent-indigo-600 w-4 h-4" />
+               </label>
+             </div>
 
-              {/* Registration Options (Hide if Walk-in) */}
-              {!isWalkIn ? (
-                <div className="animate-in slide-in-from-top-2">
-                    <div className="space-y-2 mb-6">
-                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2">
-                           <Clock size={12} /> Registration Closing Date
-                        </label>
-                        <input name="regDeadline" type="date" defaultValue={selectedEvent?.regDeadline || selectedEvent?.date} className="w-full p-4 bg-white border border-rose-100 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-rose-500 transition-all shadow-sm text-rose-600" />
-                        <p className="text-[9px] text-slate-400 ml-2 italic">Students cannot register after this date, even if the event hasn't started.</p>
-                    </div>
+             {!isWalkIn ? (
+               <div className="animate-in slide-in-from-top-2">
+                   <div className="space-y-2 mb-6">
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2">
+                          <Clock size={12} /> Registration Closing Date
+                       </label>
+                       <input name="deadline" type="date" defaultValue={selectedEvent?.deadline || selectedEvent?.date} className="w-full p-4 bg-white border border-rose-100 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-rose-500 transition-all shadow-sm text-rose-600" />
+                       <p className="text-[9px] text-slate-400 ml-2 italic">Students cannot register after this date, even if the event hasn't started.</p>
+                   </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {[
-                        { key: 'requireMatric', label: 'Matric Number', icon: <GraduationCap size={14}/> },
-                        { key: 'requireFaculty', label: 'Faculty Info', icon: <Building2 size={14}/> },
-                        { key: 'requireTshirt', label: 'T-shirt Size', icon: <Sparkles size={14}/> },
-                        { key: 'requirePayment', label: 'Payment Receipt', icon: <ShieldCheck size={14}/> },
-                        { key: 'requireIC', label: 'IC Number', icon: <Fingerprint size={14}/> }
-                        ].map(item => (
-                        <button key={item.key} type="button" onClick={() => toggleConfig(item.key)} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${formConfig[item.key] ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-200'}`}>
-                            <div className={formConfig[item.key] ? 'text-white' : 'text-indigo-400'}>{item.icon}</div>
-                            <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
-                        </button>
-                        ))}
-                    </div>
-                    
-                    <div className="pt-4 space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2">
-                           <LinkIcon size={12}/> Post-Registration WhatsApp/Telegram Link
-                        </label>
-                        <div className="relative">
-                           <ExternalLink className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16}/>
-                           <input name="externalLink" defaultValue={formConfig.externalLink} placeholder="https://chat.whatsapp.com/..." className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
-                        </div>
-                    </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-center">
-                    <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Walk-in Mode Active</p>
-                    <p className="text-[10px] text-indigo-500 mt-1">Users will see event details but no "Register" button is required. Ideal for food festivals or open houses.</p>
-                </div>
-              )}
+                   <div className="grid grid-cols-2 gap-4">
+                       {[
+                       { key: 'requireMatric', label: 'Matric Number', icon: <GraduationCap size={14}/> },
+                       { key: 'requireFaculty', label: 'Faculty Info', icon: <Building2 size={14}/> },
+                       { key: 'requireTshirt', label: 'T-shirt Size', icon: <Sparkles size={14}/> },
+                       { key: 'requirePayment', label: 'Payment Receipt', icon: <ShieldCheck size={14}/> },
+                       { key: 'requireIC', label: 'IC Number', icon: <Fingerprint size={14}/> }
+                       ].map(item => (
+                       <button key={item.key} type="button" onClick={() => toggleConfig(item.key)} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${formConfig[item.key] ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-400 border-slate-200'}`}>
+                           <div className={formConfig[item.key] ? 'text-white' : 'text-indigo-400'}>{item.icon}</div>
+                           <span className="text-[10px] font-bold uppercase tracking-tight">{item.label}</span>
+                       </button>
+                       ))}
+                   </div>
+                   
+                   <div className="pt-4 space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase ml-2 flex items-center gap-2">
+                          <LinkIcon size={12}/> Post-Registration WhatsApp/Telegram Link
+                       </label>
+                       <div className="relative">
+                          <ExternalLink className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16}/>
+                          <input name="externalLink" defaultValue={formConfig.externalLink} placeholder="https://chat.whatsapp.com/..." className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm" />
+                       </div>
+                   </div>
+               </div>
+             ) : (
+               <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-center">
+                   <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Walk-in Mode Active</p>
+                   <p className="text-[10px] text-indigo-500 mt-1">Users will see event details but no "Register" button is required. Ideal for food festivals or open houses.</p>
+               </div>
+             )}
           </div>
 
           <div className="space-y-1">
@@ -1710,12 +1329,9 @@ const CreateEditEvent = () => {
   );
 };
 
-
-// -----------------------------------------------------------------------------
-// [SECTION] VIEW: PARTICIPANTS LIST (ADMIN)
-// -----------------------------------------------------------------------------
+// SECTION VIEW: PARTICIPANTS LIST (ADMIN)
 const ParticipantsListView = () => {
-  const { selectedEvent, registrations, setRegistrations, setView, downloadCSV, notify } = useContext(AppContext);
+  const { selectedEvent, registrations, setView, downloadCSV, notify } = useContext(AppContext);
   const [searchTerm, setSearchTerm] = useState('');
     
   const eventParticipants = useMemo(() => {
@@ -1730,16 +1346,18 @@ const ParticipantsListView = () => {
     
   const toggleAttendance = async (regId, currentStatus) => {
     try {
-      // UPDATE LOCAL STATE
-      setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, attendance: !currentStatus } : r));
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', regId), {
+        attendance: !currentStatus
+      });
       notify(`Attendance updated!`);
     } catch (e) { notify("Update failed", "error"); }
   };
 
   const verifyPayment = async (regId, currentStatus) => {
       try {
-      // UPDATE LOCAL STATE
-      setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, paymentStatus: currentStatus === 'Verified' ? 'Pending' : 'Verified' } : r));
+      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', regId), {
+        paymentStatus: currentStatus === 'Verified' ? 'Pending' : 'Verified'
+      });
       notify(`Payment status updated!`);
     } catch (e) { notify("Update failed", "error"); }
   };
@@ -1842,7 +1460,7 @@ const ParticipantsListView = () => {
                   </button>
                 </td>
                 <td className="p-8 text-right">
-                  <button onClick={async () => { if(confirm("Remove participant?")) setRegistrations(prev => prev.filter(r => r.id !== reg.id)) }} className="text-rose-400 hover:text-rose-600 p-2"><Trash2 size={18}/></button>
+                  <button onClick={async () => { if(confirm("Remove participant?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', reg.id)); }} className="text-rose-400 hover:text-rose-600 p-2"><Trash2 size={18}/></button>
                 </td>
               </tr>
             ))}
@@ -1861,25 +1479,21 @@ const ParticipantsListView = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] FORM: EDIT PROFILE
-// -----------------------------------------------------------------------------
+// SECTION FORM: EDIT PROFILE
 const EditProfileView = () => {
   const { user, profile, setProfile, setView, notify, uploadFile } = useContext(AppContext);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState(null);
   const [expandPassword, setExpandPassword] = useState(false);
     
-  // [NEW] 1. Upload Loading State & Storage for the URL
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState(null);
 
-  // [NEW] 2. Handle Image Upload immediately on selection
-  const handleImageUpload = async (e) => {
+  const onUpload = async (e) => {
     const selectedFile = e.target.files[0];
     if (!selectedFile) return;
 
-    setFile(selectedFile); // Keep for UI feedback (filename display)
+    setFile(selectedFile);
     setIsUploading(true);
 
     try {
@@ -1928,9 +1542,9 @@ const EditProfileView = () => {
               }
 
               try {
-                // MOCK PASSWORD CHANGE
-                await new Promise(r => setTimeout(r, 800));
-                notify("Password updated successfully!");
+                const credential = EmailAuthProvider.credential(user.email, oldPass);
+                await reauthenticateWithCredential(auth.currentUser, credential);
+                await updatePassword(auth.currentUser, newPass);
               } catch (reauthErr) {
                 console.error(reauthErr);
                 notify("Old password incorrect or update failed", "error");
@@ -1939,7 +1553,6 @@ const EditProfileView = () => {
               }
             }
 
-            // [UPDATED] Use the pre-uploaded URL or fallback to existing profile URL
             const photoUrl = uploadedPhotoUrl || profile.photoUrl || '';
 
             const data = {
@@ -1951,8 +1564,7 @@ const EditProfileView = () => {
               email: profile.email,
               photoUrl
             };
-            
-            // UPDATE LOCAL STATE
+            await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), data);
             setProfile(data);
             notify("Looking good! Profile changes saved");
             setView('profile');
@@ -1974,13 +1586,11 @@ const EditProfileView = () => {
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Profile Photo</label>
             <div className={`w-full p-6 border-4 border-dashed rounded-2xl flex items-center justify-center relative overflow-hidden transition ${file ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 hover:bg-white/50'}`}>
-                {/* [UPDATED] Input uses handleImageUpload */}
-                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleImageUpload} accept="image/*" />
+                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={onUpload} accept="image/*" />
                 <div className="text-center flex flex-col items-center gap-2">
                     {(profile?.photoUrl && !file) && <img src={profile.photoUrl} className="w-16 h-16 rounded-full object-cover mb-2 shadow-md ring-2 ring-white" alt="Current"/>}
                     {file ? (
                         <div className="flex flex-col items-center">
-                           {/* Show visual feedback if uploaded */}
                            {uploadedPhotoUrl && <img src={uploadedPhotoUrl} className="w-16 h-16 rounded-full object-cover mb-2 shadow-md ring-2 ring-indigo-200" alt="New Preview"/>}
                            <p className="text-indigo-600 font-bold text-xs flex items-center gap-2">
                              {isUploading ? <Loader2 size={16} className="animate-spin"/> : <CheckCircle2 size={16}/>} 
@@ -2058,7 +1668,6 @@ const EditProfileView = () => {
           <div className="flex gap-4 pt-10">
             <button type="button" onClick={() => setView('profile')} className="flex-1 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 transition">Cancel</button>
               
-            {/* [UPDATED] 3. Button with Conditional Text & Disabled state */}
             <button 
               type="submit" 
               disabled={uploading || isUploading} 
@@ -2081,10 +1690,7 @@ const EditProfileView = () => {
   );
 };
 
-
-// -----------------------------------------------------------------------------
-// [SECTION] VIEW: USER PROFILE
-// -----------------------------------------------------------------------------
+// SECTION VIEW: USER PROFILE
 const ProfileView = () => {
   const { user, profile, events, registrations, setView, setSelectedEvent, notify } = useContext(AppContext);
     
@@ -2098,11 +1704,11 @@ const ProfileView = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-100 rounded-full -mr-32 -mt-32 opacity-50 blur-3xl group-hover:bg-indigo-200 transition-colors duration-700"></div>
         <div className="relative flex flex-col md:flex-row md:items-center gap-8">
           <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-indigo-500/30 overflow-hidden ring-4 ring-white/50">
-             {profile?.photoUrl ? (
-               <img src={profile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
-             ) : (
-               <User size={48} />
-             )}
+              {profile?.photoUrl ? (
+                <img src={profile.photoUrl} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User size={48} />
+              )}
           </div>
           <div className="flex-1">
             <span className="bg-indigo-100 text-indigo-600 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">{profile?.role || 'Guest'} Account</span>
@@ -2124,7 +1730,6 @@ const ProfileView = () => {
         </div>
       </div>
 
-      {/* [FEATURE] CLUB ANALYTICS DASHBOARD */}
       {isClub && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
             <div className="bg-white p-6 rounded-[2rem] shadow-lg border border-indigo-50 flex flex-col items-center text-center group hover:scale-105 transition-transform">
@@ -2178,16 +1783,13 @@ const ProfileView = () => {
                 </div>
                 <div>
                   <h4 className="text-2xl font-black text-slate-900 leading-tight">{isClub ? item.title : item.eventTitle}</h4>
-                  {/* --- COUNTDOWN TIMER LOGIC --- */}
                   {!isClub && (() => {
-                    // Find the actual event object to get the real date
                     const linkedEvent = events.find(e => e.id === item.eventId);
                     
                     if (linkedEvent) {
                       const eventDate = new Date(linkedEvent.date);
                       const today = new Date();
-                      today.setHours(0,0,0,0); // Reset hours for accurate day calculation
-                      
+                      today.setHours(0,0,0,0);
                       const diffTime = eventDate - today;
                       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
@@ -2236,28 +1838,24 @@ const ProfileView = () => {
                       <Users size={16} /> List
                     </button>
                     <button onClick={() => { setSelectedEvent(item); setView('edit-event'); }} className="p-4 bg-slate-50 text-slate-400 rounded-2xl hover:bg-indigo-600 hover:text-white transition hover:shadow-lg"><Edit3 size={20} /></button>
-                    <button onClick={async () => { if(confirm("Permanently delete this event?")) setEvents(prev => prev.filter(e => e.id !== item.id)) }} className="p-4 bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white rounded-2xl transition hover:shadow-lg"><Trash2 size={20} /></button>
+                    <button onClick={async () => { if(confirm("Permanently delete this event?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'events', item.id)); }} className="p-4 bg-slate-50 text-slate-400 hover:bg-rose-500 hover:text-white rounded-2xl transition hover:shadow-lg"><Trash2 size={20} /></button>
                   </>
                 ) : (
                   <>
                     <button 
                         onClick={() => { 
-                          // 1. Cari data event asal berdasarkan ID dalam registration
                           const linkedEvent = events.find(e => e.id === item.eventId);
                           
                           if (linkedEvent) {
-                            // 2. Check Tarikh Tutup (Deadline)
-                            const deadline = linkedEvent.regDeadline ? new Date(linkedEvent.regDeadline) : new Date(linkedEvent.date);
-                            deadline.setHours(23, 59, 59); // Set ke penghujung hari
+                            const deadline = linkedEvent.deadline ? new Date(linkedEvent.deadline) : new Date(linkedEvent.date);
+                            deadline.setHours(23, 59, 59);
                             const now = new Date();
 
                             if (now > deadline) {
-                                // Kalau dah tutup
                                 notify("Registration has closed. Updates are not allowed.", "error");
                             } else {
-                                // Kalau masih buka -> Bawa ke form
-                                setSelectedEvent(linkedEvent); // Load data event
-                                setView('register-form');      // Buka form (form akan auto-detect 'Edit Mode')
+                                setSelectedEvent(linkedEvent);
+                                setView('register-form');
                             }
                           } else {
                             notify("Event details not found.", "error");
@@ -2267,7 +1865,7 @@ const ProfileView = () => {
                       >
                         Update
                     </button>      
-                    <button onClick={async () => { if(confirm("Cancel registration for this event?")) setRegistrations(prev => prev.filter(r => r.id !== item.id)) }} className="px-6 py-3 text-xs font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 rounded-xl transition border border-transparent hover:border-rose-100">Cancel</button>
+                    <button onClick={async () => { if(confirm("Cancel registration for this event?")) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'registrations', item.id)); }} className="px-6 py-3 text-xs font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 rounded-xl transition border border-transparent hover:border-rose-100">Cancel</button>
                   </>
                 )}
               </div>
@@ -2284,37 +1882,20 @@ const ProfileView = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] AUTH VIEW (MOCKED BUT INTERACTIVE)
-// -----------------------------------------------------------------------------
-const AuthView = () => {
-  const { authMode, setAuthMode, setView, setProfile, setUser, setLoading, notify } = useContext(AppContext);
-  const [showPassword, setShowPassword] = useState(false);
-  
-  // State untuk simpan input pengguna (Interaktif)
-  const [formData, setFormData] = useState({
-    fullName: '',
-    matric: '',
-    email: '',
-    password: '',
-    role: 'student'
-  });
+// SECTION VIEW: AUTHENTICATION (LOGIN/SIGNUP)
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+const AuthView = () => {
+  const { authMode, setAuthMode, setView, setProfile, setLoading, notify } = useContext(AppContext);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-20 bg-slate-950 relative overflow-hidden">
 
-      {/* --- LATAR BELAKANG TAK KOSONG (ANIMATED BLOBS) --- */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] animate-pulse"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-violet-600/20 rounded-full blur-[120px] animate-pulse delay-700"></div>
       
-      {/* Grid Pattern untuk estetika moden */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
 
-      {/* Back Arrow Button */}
       <button 
         onClick={() => setView('home')} 
         className="absolute top-4 left-4 md:top-8 md:left-8 p-3 md:p-4 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg text-slate-400 hover:text-white hover:bg-white/20 transition-all z-50 group"
@@ -2322,9 +1903,7 @@ const AuthView = () => {
         <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
       </button>
 
-      {/* --- DARK MODE GLASSMORPHISM CARD (bg-white/5) --- */}
       <div className="bg-white/5 backdrop-blur-3xl p-6 md:p-16 rounded-[3.5rem] md:rounded-[4.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-white/10 w-[98%] max-w-md md:max-w-xl lg:max-w-lg relative overflow-hidden z-10 ring-1 ring-white/10 my-auto">
-        {/* Glow Line at top of card */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>
         
         <div className="text-center mb-10 relative z-10">
@@ -2332,9 +1911,9 @@ const AuthView = () => {
              <Building2 size={40} className="text-white"/>
            </div>
 
-           <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-tighter leading-none">
-             {authMode === 'login' ? 'Hello Again!' : 'CREATE A NEW ACCOUNT'}
-           </h2>
+            <h2 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 uppercase tracking-tighter leading-none">
+              {authMode === 'login' ? 'Hello Again!' : 'CREATE A NEW ACCOUNT'}
+            </h2>
 
            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em] mt-4 italic opacity-60">
              Start your journey with us
@@ -2344,64 +1923,41 @@ const AuthView = () => {
         <form onSubmit={async (e) => {
         e.preventDefault();
         const f = e.target;
-        if (authMode === 'signup' && formData.password !== f.rePassword.value) { notify("Passwords mismatch", "error"); return; }
-        
+        if (authMode === 'signup' && f.password.value !== f.rePassword.value) { notify("Passwords don't match. Check again.", "error"); return; }
         setLoading(true);
-        // MOCK LOGIN LOGIC
-        setTimeout(() => {
-            let mockUser = { uid: `user-${Date.now()}`, email: formData.email };
-            let mockProfile = {};
-
-            if (authMode === 'signup') {
-                // --- LOGIK REGISTER (Guna apa yang awak taip) ---
-                mockProfile = {
-                    fullName: formData.fullName || 'New Student',
-                    role: formData.role, 
-                    faculty: 'FPTV',
-                    matric: 'N/A',
-                    photoUrl: '' 
-                };
-                notify("Account created successfully! Welcome.");
-            } else {
-                // --- LOGIK LOGIN (Auto-detect watak berdasarkan email) ---
-                const emailLower = formData.email.toLowerCase();
-
-                if (emailLower.includes('club') || emailLower.includes('admin')) {
-                    // LOGIN SEBAGAI CLUB
-                    mockUser.uid = 'demo-club';
-                    mockProfile = { fullName: 'Computer Science Club', role: 'club', faculty: 'FSKTM', photoUrl: 'https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&q=80' };
-                } else if (emailLower.includes('staff')) {
-                    // LOGIN SEBAGAI STAFF
-                    mockUser.uid = 'demo-staff';
-                    mockProfile = { fullName: 'Dr. Sarah (Staff)', role: 'staff', faculty: 'HEP', photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80' };
-                } else {
-                    // LOGIN SEBAGAI STUDENT
-                    mockUser.uid = 'demo-student';
-                    mockProfile = { fullName: 'Ali Bin Abu', role: 'student', faculty: 'FSKTM', matric: 'AI190023', photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80' };
-                }
-                notify(`Welcome back, ${mockProfile.fullName}!`);
-            }
-
-            setUser(mockUser);
-            setProfile(mockProfile);
-            setLoading(false);
-            setView('home');
-        }, 1500);
-
+        try {
+          if (authMode === 'login') {
+            await signInWithEmailAndPassword(auth, f.email.value, f.password.value);
+            notify("Welcome back!");
+          } else {
+            const res = await createUserWithEmailAndPassword(auth, f.email.value, f.password.value);
+            const data = { fullName: f.fullName.value, email: f.email.value, role: f.role.value, faculty: 'FPTV', createdAt: serverTimestamp() };
+            await setDoc(doc(db, 'artifacts', appId, 'users', res.user.uid, 'profile', 'data'), data);
+            setProfile(data);
+            notify("Account created successfully! Welcome.");
+          }
+          setView('home');
+        } catch (e) { 
+          let msg = "Something went wrong. Please try again.";
+          if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') msg = "Incorrect email or password.";
+          if (e.code === 'auth/email-already-in-use') msg = "Looks like you already have an account. Try logging in.";
+          if (e.code === 'auth/too-many-requests') msg = "Too many attempts. Try again later.";
+          
+          notify(msg, "error"); 
+        }
+        finally { setLoading(false); }
       }} className="space-y-4 relative z-10">
           
-          {/* Input ditukar ke gaya Dark Glass (text-white) */}
           {authMode === 'signup' && (
-            <input name="fullName" required onChange={handleChange} placeholder="Full Name" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
+            <input name="fullName" required placeholder="Full Name" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
           )}
           
-          <input name="email" required type="email" onChange={handleChange} placeholder="University Email" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
+          <input name="email" required type="email" placeholder="University Email" className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" />
           
           <div className="relative">
             <input 
               name="password" 
               required 
-              onChange={handleChange}
               type={showPassword ? "text" : "password"} 
               placeholder="Password" 
               className="w-full p-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all placeholder:text-slate-500" 
@@ -2418,8 +1974,9 @@ const AuthView = () => {
           )}
 
           {authMode === 'signup' && (
-            <select name="role" onChange={handleChange} className="w-full p-5 bg-slate-900 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="student">Student Account</option>
+            <select name="role" className="w-full p-5 bg-slate-900 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="student">Student </option>
+              <option value="staff">Staff </option>
               <option value="club">Club Administrator</option>
             </select>
           )}
@@ -2437,15 +1994,11 @@ const AuthView = () => {
   );
 };
 
-
-// -----------------------------------------------------------------------------
-// [SECTION] VIEW: ABOUT US
-// -----------------------------------------------------------------------------
+// SECTION VIEW: ABOUT US
 const AboutUsView = () => {
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      {/* 1. HERO SECTION (The Big Statement) */}
       <div className="text-center space-y-6 py-12">
         <h2 className="text-3xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 tracking-tighter uppercase leading-none">
           Unlock Every Opportunity, <br/> Experience Every Moment.
@@ -2453,7 +2006,6 @@ const AboutUsView = () => {
         <div className="w-24 h-2 bg-indigo-600 mx-auto rounded-full shadow-[0_0_15px_rgba(79,70,229,0.5)]"></div>
       </div>
 
-      {/* 2. MISSION STATEMENT (Who We Are) */}
       <div className="bg-white/70 backdrop-blur-2xl p-12 rounded-[3.5rem] shadow-2xl border border-white/60 relative overflow-hidden group">
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-100 rounded-full blur-3xl opacity-50 group-hover:bg-indigo-200 transition-colors duration-700"></div>
         <div className="relative z-10 space-y-6">
@@ -2464,7 +2016,6 @@ const AboutUsView = () => {
         </div>
       </div>
 
-      {/* 3. KEY PILLARS (The Features) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {[
           { 
@@ -2493,16 +2044,15 @@ const AboutUsView = () => {
           }
         ].map((pillar, idx) => (
           <div key={idx} className="bg-white/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/40 hover:bg-white/80 transition-all duration-500 hover:-translate-y-2 hover:shadow-xl group">
-              <div className={`w-14 h-14 bg-${pillar.color}-100 text-${pillar.color}-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:bg-${pillar.color}-600 group-hover:text-white transition-all`}>
-                {pillar.icon}
-              </div>
-              <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-3">{pillar.title}</h4>
-              <p className="text-slate-500 font-medium leading-relaxed">{pillar.desc}</p>
+             <div className={`w-14 h-14 bg-${pillar.color}-100 text-${pillar.color}-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:bg-${pillar.color}-600 group-hover:text-white transition-all`}>
+               {pillar.icon}
+             </div>
+             <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-3">{pillar.title}</h4>
+             <p className="text-slate-500 font-medium leading-relaxed">{pillar.desc}</p>
           </div>
         ))}
       </div>
 
-      {/* FOOTER CALL TO ACTION */}
       <div className="text-center pt-10">
         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.5em] mb-4 italic">Built for the future of UTHM</p>
       </div>
@@ -2510,23 +2060,17 @@ const AboutUsView = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] NOTIFIACTION COMPONENT
-// -----------------------------------------------------------------------------
 
-const HeaderNotification = () => {
+// SECTION NOTIFIACTION COMPONENT
+
+const HeaderNotification = ({ userId, db, appId }) => {
   const [show, setShow] = useState(false);
-  // Mock notifications for demo view
-  const [notis, setNotis] = useState([
-    { id: 1, message: "Welcome to UTHM Event Pulse!", timestamp: { seconds: Date.now() / 1000 }, isRead: false },
-    { id: 2, message: "Upcoming: Futsal Friendly Match in 3 days.", timestamp: { seconds: (Date.now() - 86400000) / 1000 }, isRead: false }
-  ]);
+  const [notis, setNotis] = useState([]);
   const handleDelete = (idToDelete) => {
     setNotis(currentNotis => currentNotis.filter(n => n.id !== idToDelete));
   };
-  const [unreadCount, setUnreadCount] = useState(2);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const closeOpen = (e) => {
       if (!e.target.closest('.noti-container')) setShow(false);
@@ -2534,6 +2078,17 @@ const HeaderNotification = () => {
     document.addEventListener('click', closeOpen);
     return () => document.removeEventListener('click', closeOpen);
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const q = query(collection(db, 'artifacts', appId, 'users', userId, 'notifications'), orderBy('timestamp', 'desc'), limit(5));
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setNotis(data);
+      setUnreadCount(data.filter(n => !n.isRead).length); 
+    });
+    return () => unsub();
+  }, [userId]);
 
   const handleMarkRead = async () => {
      setShow(!show);
@@ -2544,7 +2099,7 @@ const HeaderNotification = () => {
 
   return (
     <div className="relative noti-container mr-4">
-      {/* Bell Button */}
+
       <button onClick={handleMarkRead} className="relative p-2.5 rounded-xl hover:bg-white/50 transition-all text-slate-500 hover:text-indigo-600">
         <Bell size={20} />
         {unreadCount > 0 && (
@@ -2552,47 +2107,45 @@ const HeaderNotification = () => {
         )}
       </button>
 
-      {/* Dropdown Menu */}
       {show && (
-        <div className="absolute right-0 top-12 w-80 bg-white/80 hover:bg-white rounded-[1.5rem] rounded-[1.5rem] shadow-2xl border border-slate-200 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
+        <div className="absolute right-0 top-12 w-80 bg-white/80 hover:bg-white rounded-[1.5rem] rounded-[1.5rem] shadow-2xl border border-slate-200 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
           <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Notifications</span>
-              <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md">{notis.length} Recent</span>
+             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Notifications</span>
+             <span className="text-[9px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md">{notis.length} Recent</span>
           </div>
           
           <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
             {notis.length === 0 ? (
                <div className="p-8 text-center text-slate-400 text-xs italic">No new notifications</div>
             ) : (
-                notis.map(n => (
-                  <div key={n.id} className="group relative p-4 hover:bg-indigo-50/50 transition border-b border-slate-50 last:border-0 cursor-pointer">
-                    <div className="flex gap-3 justify-between items-start">
-                      
-                      {/* Left: Info */}
-                      <div className="flex gap-3 w-full">
-                        <div className="w-1.5 h-1.5 mt-1.5 bg-indigo-500 rounded-full shrink-0"></div>
-                        <div>
-                            <p className="text-xs font-bold text-slate-700 leading-snug">{n.message}</p>
-                            <p className="text-[9px] text-slate-400 mt-1 font-medium">
-                              {n.timestamp ? new Date(n.timestamp.seconds * 1000).toLocaleDateString() : 'Just now'}
-                            </p>
-                        </div>
-                      </div>
+               notis.map(n => (
+                 <div key={n.id} className="group relative p-4 hover:bg-indigo-50/50 transition border-b border-slate-50 last:border-0 cursor-pointer">
+                   <div className="flex gap-3 justify-between items-start">
+                     
+                     <div className="flex gap-3 w-full">
+                       <div className="w-1.5 h-1.5 mt-1.5 bg-indigo-500 rounded-full shrink-0"></div>
+                       <div>
+                           <p className="text-xs font-bold text-slate-700 leading-snug">{n.message}</p>
+                           <p className="text-[9px] text-slate-400 mt-1 font-medium">
+                             {n.timestamp ? new Date(n.timestamp.seconds * 1000).toLocaleDateString() : 'Just now'}
+                           </p>
+                       </div>
+                     </div>
 
-                      {/* Right: Delete Button */}
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation(); 
-                          handleDelete(n.id); 
-                        }}
-                        className="text-slate-400 hover:text-rose-500 transition opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                     <button 
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         handleDelete(n.id);
+                       }}
+                       className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition" 
+                     >
+                       <Trash2 size={14} />
+                     </button>
 
-                    </div>
-                  </div>
-                ))
+                   </div>
+                 </div>
+               ))
+            
             )}
           </div>
         </div>
@@ -2601,164 +2154,286 @@ const HeaderNotification = () => {
   );
 };
 
-// -----------------------------------------------------------------------------
-// [SECTION] MAIN APP COMPONENT
-// -----------------------------------------------------------------------------
+// SECTION MAIN APP COMPONENT
 export default function UTHMClubEventSystem() {
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [view, setView] = useState('home');
-  const [authMode, setAuthMode] = useState('login'); 
-  
-  // INITIALIZE MOCK DATA HERE
-  const [events, setEvents] = useState(MOCK_EVENTS_DATA); 
-  const [registrations, setRegistrations] = useState([]);
-  
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [loading, setLoading] = useState(false); // No global loading needed for mock
-  const [notification, setNotification] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [view, setView] = useState(() => {
+    return localStorage.getItem('currentView') || 'home';
+  });
+  const [authMode, setAuthMode] = useState('login'); 
+    
+  const [events, setEvents] = useState([]); 
+  const [registrations, setRegistrations] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
 
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
 const getCategoryTheme = (cat) => {
-  switch (cat) {
-    case 'Sport': return { color: 'amber', icon: <Trophy size={14} /> };
-    case 'Academic': return { color: 'indigo', icon: <GraduationCap size={14} /> };
-    case 'Workshop': return { color: 'violet', icon: <Wrench size={14} /> };
-    case 'Welfare': return { color: 'emerald', icon: <Heart size={14} /> };
-    case 'Leadership': return { color: 'blue', icon: <ShieldCheck size={14} /> };
-    case 'Entrepreneur': return { color: 'cyan', icon: <Store size={14} /> };
-    case 'Arts': return { color: 'rose', icon: <Palette size={14} /> };
-    case 'Religious': return { color: 'teal', icon: <BookOpen size={14} /> };
-    case 'Career': return { color: 'slate', icon: <Briefcase size={14} /> };
-    default: return { color: 'slate', icon: <Sparkles size={14} /> };
-  }
+  switch (cat) {
+    case 'Sport': return { color: 'amber', icon: <Trophy size={14} /> };
+    case 'Academic': return { color: 'indigo', icon: <GraduationCap size={14} /> };
+    case 'Workshop': return { color: 'violet', icon: <Wrench size={14} /> };
+    case 'Welfare': return { color: 'emerald', icon: <Heart size={14} /> };
+    case 'Leadership': return { color: 'blue', icon: <ShieldCheck size={14} /> };
+    case 'Entrepreneur': return { color: 'cyan', icon: <Store size={14} /> };
+    case 'Arts': return { color: 'rose', icon: <Palette size={14} /> };
+    case 'Religious': return { color: 'teal', icon: <BookOpen size={14} /> };
+    case 'Career': return { color: 'slate', icon: <Briefcase size={14} /> };
+    default: return { color: 'slate', icon: <Sparkles size={14} /> };
+  }
 };
 
-  const notify = (msg, type = 'success') => {
-    setNotification({ msg, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
+  useEffect(() => {
 
-  const handleLogout = () => {
-    // MOCK LOGOUT
-    setLoading(true);
-    setTimeout(() => {
-        setUser(null);
-        setProfile(null);
-        setView('home');
-        setLoading(false);
-        notify("Logged out successfully. See you again soon!");
-    }, 800);
-  };
+    const unsubscribe = onAuthStateChanged(auth, async (currUser) => {
+      if (currUser) {
+        setUser(currUser);
+        setLoading(false); 
 
-  const checkDuplicateRegistration = (eventId) => {
-    return registrations.some(r => r.eventId === eventId && r.userId === user?.uid);
-  };
+        try {
+          const userDoc = await getDoc(doc(db, 'artifacts', appId, 'users', currUser.uid, 'profile', 'data'));
+          if (userDoc.exists()) {
+            setProfile(userDoc.data());
+          } else {
+            setProfile({ fullName: 'Student', role: 'student', phone: '', faculty: '', course: '' });
+          }
+        } catch (e) {
+          console.error("Profile fetch error:", e);
+        }
+      } 
+      else {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+      }
+    });
 
-  const checkEventCapacity = (event) => {
-    const count = registrations.filter(r => r.eventId === event.id).length;
-    return count < (parseInt(event.maxParticipants) || 9999);
-  };
+    return () => unsubscribe();
+  }, []);
 
-  const downloadCSV = (eventTitle, data) => {
-    const headers = ["Full Name", "Type", "Ref Code", "Email", "Phone", "Matric", "Faculty", "T-Shirt", "Status", "Attendance"];
-    const rows = data.map(r => [
-      r.fullName,
-      r.isOutsider ? "Guest" : "Student",
-      r.registerId || "N/A",
-      r.email,
-      r.phone || "N/A",
-      r.matric,
-      r.faculty,
-      r.tshirt,
-      r.paymentStatus || 'Pending',
-      r.attendance ? 'Present' : 'Absent'
-    ]);
-      
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(",") + "\n" 
-      + rows.map(e => e.join(",")).join("\n");
+  useEffect(() => {
+    localStorage.setItem('currentView', view);
+  }, [view]);
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${eventTitle}_Participants.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    notify("CSV Exported!");
-  };
 
-  // MOCK UPLOAD FUNCTION
-  const uploadFile = async (file, path) => {
-    console.log("Mock Uploading...", file?.name);
-    if (!file) return null;
-    // Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Return dummy URL
-    if (path.includes('events')) return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80';
-    return 'https://source.unsplash.com/random/800x600';
-  };
+  useEffect(() => {
+    if (selectedEvent) {
+      localStorage.setItem('currentEventId', selectedEvent.id);
+    } else {
+      if (view !== 'detail') {
+        localStorage.removeItem('currentEventId');
+      }
+    }
+  }, [selectedEvent, view]);
 
-  const contextValue = {
-    user, setUser,
-    profile, setProfile,
-    view, setView,
-    authMode, setAuthMode,
-    events, setEvents, // Expose setter for CreateEvent
-    registrations, setRegistrations, // Expose setter for Registration
-    selectedEvent, setSelectedEvent,
-    loading, setLoading,
-    notification, setNotification,
-    searchQuery, setSearchQuery,
-    categoryFilter, setCategoryFilter,
-    currentMonth, setCurrentMonth,
-    getCategoryTheme,
-    notify,
-    handleLogout,
-    checkDuplicateRegistration,
-    checkEventCapacity,
-    downloadCSV,
-    uploadFile
-  };
+  useEffect(() => {
+    const savedEventId = localStorage.getItem('currentEventId');
+    if (savedEventId && events.length > 0 && !selectedEvent) {
+      const foundEvent = events.find(e => e.id === savedEventId);
+      if (foundEvent) {
+        setSelectedEvent(foundEvent);
+      }
+    }
+  }, [events]);
 
-  if (loading && !user) return (
-    <div className="h-screen flex flex-col items-center justify-center bg-slate-900 overflow-hidden relative">
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-      <div className="relative z-10">
-        <div className="w-24 h-24 border-8 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin shadow-[0_0_20px_rgba(99,102,241,0.5)]"></div>
-        <Building2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-20" size={32} />
-      </div>
-      <p className="mt-8 text-white font-black text-xs tracking-[0.4em] uppercase opacity-40 animate-pulse">PREPARING YOUR EXPERIENCE...</p>
-    </div>
-  );
+  useEffect(() => {
+    if (!user) return;
 
-  return (
-    <AppContext.Provider value={contextValue}>
-      <div className="h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50 flex flex-col font-sans text-slate-900 selection:bg-indigo-200 selection:text-indigo-900 relative overflow-hidden">
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-400/20 rounded-full blur-[100px] animate-pulse"></div>
-          <div className="absolute bottom-[10%] right-[-5%] w-96 h-96 bg-cyan-400/20 rounded-full blur-[100px] animate-pulse delay-1000"></div>
-          <div className="absolute top-[40%] left-[30%] w-72 h-72 bg-pink-300/10 rounded-full blur-[80px] animate-bounce duration-[12s]"></div>
-        </div>
+    const qEvents = query(collection(db, 'artifacts', appId, 'public', 'data', 'events'));
+    const unsubEvents = onSnapshot(qEvents, (snap) => {
+      setEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error(err));
 
-        {notification && (
-          <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] ${notification.type === 'error' ? 'bg-rose-900 border-rose-500 shadow-rose-900/50' : 'bg-slate-900 border-indigo-500 shadow-indigo-900/50'} text-white px-8 py-4 rounded-3xl shadow-2xl font-black text-[10px] tracking-widest animate-in slide-in-from-top-8 flex items-center gap-4 border-b-4 backdrop-blur-md`}>
-            <div className={`w-2 h-2 ${notification.type === 'error' ? 'bg-rose-500' : 'bg-indigo-500'} rounded-full animate-ping`}></div>
-            {notification.msg.toUpperCase()}
-          </div>
-        )}
+    const qRegs = query(collection(db, 'artifacts', appId, 'public', 'data', 'registrations'));
+    const unsubRegs = onSnapshot(qRegs, (snap) => {
+      setRegistrations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error(err));
 
-        {/* Change: Sidebar is hidden when view is 'auth', replaced with Top Navbar */}
-        {view !== 'auth' && <Navbar />}
+    return () => { unsubEvents(); unsubRegs(); };
+  }, [user]);
 
-<main className="flex-1 h-full overflow-y-auto relative z-10 custom-scrollbar">
-          {/* 1. Navbar & Header Bar kekal saiz asal (100% size) */}
+  const notify = (msg, type = 'success') => {
+    setNotification({ msg, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+    setView('home');
+    notify("You've been logged out. See ya!");
+  };
+
+  const checkDuplicate = (eventId) => {
+    return registrations.some(r => r.eventId === eventId && r.userId === user?.uid);
+  };
+
+  const checkCapacity = (event) => {
+    const count = registrations.filter(r => r.eventId === event.id).length;
+    return count < (parseInt(event.maxParticipants) || 9999);
+  };
+
+  const downloadCSV = (eventTitle, data) => {
+    const headers = ["Full Name", "Type", "Ref Code", "Email", "Phone", "Matric", "Faculty", "T-Shirt", "Status", "Attendance"];
+    const rows = data.map(r => [
+      r.fullName,
+      r.isOutsider ? "Guest" : "Student",
+      r.registerId || "N/A",
+      r.email,
+      r.phone || "N/A",
+      r.matric,
+      r.faculty,
+      r.tshirt,
+      r.paymentStatus || 'Pending',
+      r.attendance ? 'Present' : 'Absent'
+    ]);
+      
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n" 
+      + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${eventTitle}_Participants.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    notify("CSV Exported!");
+  };
+
+  const uploadFile = async (file, path) => {
+    console.log("1. Starting uploadFile...", file?.name);
+    if (!file) return null;
+    try {
+      let fileToUpload = file;
+      const isImage = file.type.startsWith('image/');
+
+      if (isImage && file.size > 300 * 1024) {
+        console.log("2. Image is large (>300KB)... compressing.");
+        try {
+          fileToUpload = await new Promise((resolve) => {
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            img.src = objectUrl;
+              
+            img.onload = () => {
+              URL.revokeObjectURL(objectUrl); 
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 800;
+              let width = img.width;
+              let height = img.height;
+
+              if (width > MAX_WIDTH) {
+                height = Math.round((height * MAX_WIDTH) / width);
+                width = MAX_WIDTH;
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+
+              canvas.toBlob((blob) => {
+                if (blob) {
+                    console.log("3. Compression done. Old:", file.size, "New:", blob.size);
+                    resolve(blob);
+                } else {
+                    resolve(file);
+                }
+              }, 'image/jpeg', 0.7); 
+            };
+              
+            img.onerror = (err) => {
+               console.error("Image load error during resize", err);
+               URL.revokeObjectURL(objectUrl);
+               resolve(file); 
+            }
+          });
+        } catch (resizeError) {
+          console.warn("Resize failed, uploading original.", resizeError);
+        }
+      }
+
+      const extension = (fileToUpload !== file && isImage) ? '.jpg' : file.name.substring(file.name.lastIndexOf('.'));
+      const fileName = `${Date.now()}_uploaded${extension}`;
+
+      const storageRef = ref(storage, `artifacts/${appId}/${path}/${fileName}`);
+      
+      const metadata = { 
+        contentType: (fileToUpload !== file && isImage) ? 'image/jpeg' : file.type 
+      };
+      
+      console.log("4. Sending to Firebase...", storageRef.fullPath);
+      const snapshot = await uploadBytes(storageRef, fileToUpload, metadata);
+      console.log("5. Upload Success. Getting URL...");
+      const url = await getDownloadURL(snapshot.ref);
+      return url;
+    } catch (error) {
+      console.error("Upload failed", error);
+      notify("Upload failed: " + error.message, "error");
+      throw error;
+    }
+  };
+
+  const contextValue = {
+    user, setUser,
+    profile, setProfile,
+    view, setView,
+    authMode, setAuthMode,
+    events, setEvents,
+    registrations, setRegistrations,
+    selectedEvent, setSelectedEvent,
+    loading, setLoading,
+    notification, setNotification,
+    search, setSearch,
+    categoryFilter, setCategoryFilter,
+    currentMonth, setCurrentMonth,
+    getCategoryTheme,
+    notify,
+    handleLogout,
+    checkDuplicate,
+    checkCapacity,
+    downloadCSV,
+    uploadFile
+  };
+
+  if (loading && !user) return (
+    <div className="h-screen flex flex-col items-center justify-center bg-slate-900 overflow-hidden relative">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+      <div className="relative z-10">
+        <div className="w-24 h-24 border-8 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin shadow-[0_0_20px_rgba(99,102,241,0.5)]"></div>
+        <Building2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-20" size={32} />
+      </div>
+      <p className="mt-8 text-white font-black text-xs tracking-[0.4em] uppercase opacity-40 animate-pulse">PREPARING YOUR EXPERIENCE...</p>
+    </div>
+  );
+
+  return (
+    <AppContext.Provider value={contextValue}>
+      <div className="h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-indigo-50 flex flex-col font-sans text-slate-900 selection:bg-indigo-200 selection:text-indigo-900 relative overflow-hidden">
+        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-400/20 rounded-full blur-[100px] animate-pulse"></div>
+          <div className="absolute bottom-[10%] right-[-5%] w-96 h-96 bg-cyan-400/20 rounded-full blur-[100px] animate-pulse delay-1000"></div>
+          <div className="absolute top-[40%] left-[30%] w-72 h-72 bg-pink-300/10 rounded-full blur-[80px] animate-bounce duration-[12s]"></div>
+        </div>
+
+        {notification && (
+          <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] ${notification.type === 'error' ? 'bg-rose-900 border-rose-500 shadow-rose-900/50' : 'bg-slate-900 border-indigo-500 shadow-indigo-900/50'} text-white px-8 py-4 rounded-3xl shadow-2xl font-black text-[10px] tracking-widest animate-in slide-in-from-top-8 flex items-center gap-4 border-b-4 backdrop-blur-md`}>
+            <div className={`w-2 h-2 ${notification.type === 'error' ? 'bg-rose-500' : 'bg-indigo-500'} rounded-full animate-ping`}></div>
+            {notification.msg.toUpperCase()}
+          </div>
+        )}
+
+        {view !== 'auth' && <Navbar />}
+
+        <main className="flex-1 h-full overflow-y-auto relative z-10 custom-scrollbar">
           {view !== 'auth' && (
             <header className="h-14 bg-white/50 backdrop-blur-md border-b border-white/10 px-10 flex items-center justify-between relative z-10">
               <div className="flex items-center gap-4">
@@ -2776,7 +2451,7 @@ const getCategoryTheme = (cat) => {
               {user && !user.isAnonymous && (
                 <div className="flex items-center gap-6">
                   {profile?.role !== 'club' && (
-                    <HeaderNotification />
+                    <HeaderNotification userId={user.uid} db={db} appId={appId} />
                   )}
                   <div
                     onClick={() => setView('profile')}
@@ -2804,7 +2479,6 @@ const getCategoryTheme = (cat) => {
             </header>
           )}
 
-          {/* 2. KANDUNGAN VIEW (Dikecilkan kepada 90% menggunakan text-[0.9rem]) */}
           <div className="relative pb-20 text-[0.9rem]">
             {view === 'home' && <HomeView />}
             {view === 'calendar' && <CalendarView />}
@@ -2819,7 +2493,7 @@ const getCategoryTheme = (cat) => {
             {view === 'about' && <AboutUsView />}
           </div>
         </main>
-      </div>
-    </AppContext.Provider>
-  );
+      </div>
+    </AppContext.Provider>
+  );
 }
