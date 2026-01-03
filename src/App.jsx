@@ -2357,7 +2357,7 @@ const AuthView = () => {
                 mockProfile = {
                     fullName: formData.fullName || 'New Student',
                     role: formData.role, 
-                    faculty: 'FPTV',
+                    faculty: 'FSKTM',
                     matric: 'N/A',
                     photoUrl: '' 
                 };
@@ -2369,7 +2369,7 @@ const AuthView = () => {
                 if (emailLower.includes('club') || emailLower.includes('admin')) {
                     // LOGIN SEBAGAI CLUB
                     mockUser.uid = 'demo-club';
-                    mockProfile = { fullName: 'Computer Science Club', role: 'club', faculty: 'FSKTM', photoUrl: 'https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&q=80' };
+                    mockProfile = { fullName: 'Information Technology Club', role: 'club', faculty: 'FSKTM', photoUrl: 'https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&q=80' };
                 } else if (emailLower.includes('staff')) {
                     // LOGIN SEBAGAI STAFF
                     mockUser.uid = 'demo-staff';
@@ -2377,7 +2377,7 @@ const AuthView = () => {
                 } else {
                     // LOGIN SEBAGAI STUDENT
                     mockUser.uid = 'demo-student';
-                    mockProfile = { fullName: 'Ali Bin Abu', role: 'student', faculty: 'FSKTM', matric: 'AI190023', photoUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80' };
+                    mockProfile = { fullName: 'Ahmad Ali Bin Abu', role: 'student', faculty: 'FSKTM', matric: 'AI190023', photoUrl: 'https://share.google/z4RVvkoHwMaVz09IV' };
                 }
                 notify(`Welcome back, ${mockProfile.fullName}!`);
             }
