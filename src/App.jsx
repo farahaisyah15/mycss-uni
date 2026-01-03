@@ -2357,50 +2357,29 @@ const AuthView = () => {
                 mockProfile = {
                     fullName: formData.fullName || 'New Student',
                     role: formData.role, 
-                    faculty: 'FSKTM',
+                    faculty: 'FPTV',
                     matric: 'N/A',
                     photoUrl: '' 
                 };
                 notify("Account created successfully! Welcome.");
             } else {
- // ... (Bahagian atas AuthView kekal sama)
+                // --- LOGIK LOGIN (Auto-detect watak berdasarkan email) ---
+                const emailLower = formData.email.toLowerCase();
 
-        // --- LOGIK LOGIN (Auto-detect watak berdasarkan email) ---
-        const emailLower = formData.email.toLowerCase();
-
-        if (emailLower.includes('club') || emailLower.includes('admin')) {
-            // LOGIN SEBAGAI CLUB
-            mockUser.uid = 'demo-club';
-            mockProfile = { 
-                fullName: 'Information Technology Club', 
-                role: 'club', 
-                faculty: 'FSKTM', 
-                photoUrl: 'https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&q=80' 
-            };
-        } else if (emailLower.includes('staff')) {
-            // LOGIN SEBAGAI STAFF
-            mockUser.uid = 'demo-staff';
-            mockProfile = { 
-                fullName: 'Dr. Sarah (Staff)', 
-                role: 'staff', 
-                faculty: 'HEP', 
-                photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80' 
-            };
-        } else {
-            // [DIKEMASKINI] LOGIN SEBAGAI STUDENT (AHMAD ALI BIN ABU)
-            mockUser.uid = 'demo-student';
-            mockProfile = { 
-                fullName: 'Ahmad Ali Bin Abu', 
-                role: 'student', 
-                faculty: 'FSKTM', 
-                matric: 'AI190023', 
-                // Gambar Profil Lelaki Melayu/Asia
-                photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80' 
-            };
-        }
-        notify(`Welcome back, ${mockProfile.fullName}!`);
-
-// ... (Bahagian bawah kekal sama)
+                if (emailLower.includes('club') || emailLower.includes('admin')) {
+                    // LOGIN SEBAGAI CLUB
+                    mockUser.uid = 'demo-club';
+                    mockProfile = { fullName: 'Information TechnologyClub', role: 'club', faculty: 'FSKTM', photoUrl: 'https://images.unsplash.com/photo-1568992687947-868a62a9f521?auto=format&fit=crop&q=80' };
+                } else if (emailLower.includes('staff')) {
+                    // LOGIN SEBAGAI STAFF
+                    mockUser.uid = 'demo-staff';
+                    mockProfile = { fullName: 'Dr. Sarah (Staff)', role: 'staff', faculty: 'HEP', photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80' };
+                } else {
+                    // LOGIN SEBAGAI STUDENT
+                    mockUser.uid = 'demo-student';
+                    mockProfile = { fullName: 'Ahmad Ali Bin Abu', role: 'student', faculty: 'FSKTM', matric: 'AI190023', photoUrl: 'https://share.google/z4RVvkoHwMaVz09IV' };
+                }
+                notify(`Welcome back, ${mockProfile.fullName}!`);
             }
 
             setUser(mockUser);
@@ -2441,7 +2420,7 @@ const AuthView = () => {
           {authMode === 'signup' && (
             <select name="role" onChange={handleChange} className="w-full p-5 bg-slate-900 border border-white/10 rounded-2xl font-bold text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="student">Student</option>
-              <option value="club">Staff</option>
+              <option value="student">Staff</option>
               <option value="club">Club Administrator</option>
             </select>
           )}
